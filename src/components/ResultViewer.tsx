@@ -1,0 +1,108 @@
+import {
+  Check,
+  Copy,
+  Download,
+  ExternalLink,
+  FileText,
+  LoaderCircle,
+  Play,
+  RefreshCw,
+} from "lucide-react";
+import { useState } from "react";
+import toast from "react-hot-toast";
+import { exportText } from "../lib/api";
+import type { Generation, GenerationKind } from "../types";
+export default function ResultViewer({
+  kind,
+  row,
+  onCheck,
+  busy,
+}: {
+  kind: GenerationKind;
+  row: Generation | null;
+  onCheck: () => void;
+  busy: boolean;
+}) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    await navigator.clipboard.writeText(row?.output_text || "");
+    setCopied(true);
+    toast.success("Copied");
+    setTimeout(() => setCopied(false), 1500);
+  }
+  if (!row)
+    return (
+      <div className="emptyResult">
+        <div>{kind === "text" ? <FileText /> : <Play />}</div>
+        <h3>Your creation appears here</h3>
+        <p>Enter a prompt, adjust the settings, and generate.</p>
+      </div>
+    );
+  if (row.status === "failed")
+    return (
+      <div className="emptyResult error">
+        <h3>Generation failed</h3>
+        <p>{row.error || "The provider did not complete this request."}</p>
+      </div>
+    );
+  if (row.status !== "completed")
+    return (
+      <div className="emptyResult">
+        <LoaderCircle className="spin heroSpinner" />
+        <h3>Veo is rendering your scene</h3>
+        <p>
+          This can take several minutes. The job is saved, and this page checks
+          automatically every 10 seconds.
+        </p>
+        <button className="secondary" onClick={onCheck} disabled={busy}>
+          <RefreshCw />
+          Check now
+        </button>
+      </div>
+    );
+  return (
+    <div className="resultViewer">
+      <div className="resultCanvas">
+        {row.kind === "text" ? (
+          <article>{row.output_text}</article>
+        ) : row.kind === "image" ? (
+          <img src={row.asset_url!} alt={row.prompt} />
+        ) : (
+          <video controls autoPlay={false} src={row.asset_url!} />
+        )}
+      </div>
+      <footer>
+        <span>
+          <i>
+            <Check />
+          </i>
+          <b>Generation complete</b>
+          <small>{row.model}</small>
+        </span>
+        <div>
+          {row.kind === "text" ? (
+            <>
+              <button className="iconButton" onClick={copy}>
+                {copied ? <Check /> : <Copy />}
+              </button>
+              <button className="secondary" onClick={() => exportText(row)}>
+                <Download />
+                Export
+              </button>
+            </>
+          ) : (
+            <a
+              className="secondary"
+              href={row.asset_url!}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <ExternalLink />
+              Open asset
+            </a>
+          )}
+        </div>
+      </footer>
+    </div>
+  );
+}
