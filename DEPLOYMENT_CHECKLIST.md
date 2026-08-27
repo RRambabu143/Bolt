@@ -1,0 +1,21 @@
+# Deployment checklist
+
+- [ ] Create a Supabase project.
+- [ ] Copy public Supabase URL and anon key into Bolt.
+- [ ] Keep VITE_DEMO_MODE false for production.
+- [ ] Run the database migration.
+- [ ] Enable email/password authentication.
+- [ ] Configure redirect URLs for localhost and production.
+- [ ] Add OpenAI and Google API keys as Supabase secrets.
+- [ ] Deploy all four Edge Functions.
+- [ ] Confirm the generations bucket is private.
+- [ ] Test signup and email confirmation.
+- [ ] Generate one text result.
+- [ ] Generate one image and reload History.
+- [ ] Generate one Veo video and confirm polling survives refresh.
+- [ ] Favorite, search and delete a generation.
+- [ ] Confirm deleted media is unavailable.
+- [ ] Configure provider spend alerts.
+- [ ] Enable CAPTCHA before public launch.
+- [ ] Run npm test and npm run build.
+- [ ] Connect the production domain.

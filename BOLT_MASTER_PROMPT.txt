@@ -1,0 +1,56 @@
+Build and maintain the existing project named MindMesh AI Studio Pro. This repository is already a complete React, TypeScript, Vite and Supabase application. Do not replace it with a simplified mockup and do not remove working features.
+
+PRIMARY GOAL
+Deliver a polished multimodal creator SaaS for text generation with OpenAI, image generation with Google Gemini 3.1 Flash Image, and asynchronous video generation with Google Veo 3.1. Preserve generation history and private cloud storage.
+
+REQUIRED FEATURES
+1. Email and password authentication with Supabase.
+2. Text Studio using the OpenAI Responses API.
+3. Image Studio using GOOGLE_IMAGE_MODEL, default gemini-3.1-flash-image.
+4. Video Studio using GOOGLE_VIDEO_MODEL, default veo-3.1-generate-preview.
+5. Prompt templates for creator, marketing, portrait, product and cinematic workflows.
+6. GPT-powered prompt enhancement.
+7. Settings for tone, format, creativity, aspect ratio, negative prompt, seed, duration, resolution and native audio.
+8. Per-user generation history with search, text/image/video filters, favorites and deletion.
+9. Private Supabase Storage. Never change it to public.
+10. Temporary signed URLs for asset display.
+11. Persistent Veo operation names and automatic ten-second polling.
+12. Daily quota tracking.
+13. Responsive premium dark UI with lime and mint accents.
+14. Demo mode controlled by VITE_DEMO_MODE.
+15. TypeScript compilation and automated validation tests.
+
+SECURITY RULES
+- Never expose OPENAI_API_KEY, GOOGLE_AI_API_KEY or SUPABASE_SERVICE_ROLE_KEY in frontend code.
+- Never create provider variables prefixed with VITE_.
+- Verify the bearer token in every Edge Function.
+- Scope every database read, update and delete to the authenticated user.
+- Keep RLS enabled.
+- Select provider models on the server. Do not accept arbitrary model IDs from clients.
+- Validate request length, generation kind, settings, UUIDs and action names.
+- Sanitize provider errors.
+- Delete private media when a generation is deleted.
+
+DESIGN RULES
+- Preserve the MindMesh name and AI Studio Pro product identity.
+- Use Manrope for display typography and DM Sans for interface typography.
+- Use near-black surfaces, thin gray borders, soft radial glows, lime success accents and mint gradients.
+- Keep the layout calm, professional and creator-focused.
+- Desktop uses a fixed left navigation and two-column studio.
+- Mobile uses compact top navigation and single-column content.
+- Provide accessible labels, clear focus states, loading feedback, empty states and error states.
+
+DATA MODEL
+Preserve profiles, generations and usage_events. The generations table must contain user_id, kind, provider, prompt, enhanced_prompt, model, status, output_text, storage_path, thumbnail_path, provider_job_id, settings, metadata, error, favorite and timestamps.
+
+VIDEO LIFECYCLE
+POST generation creates the Veo operation and saves its name. The browser polls video-status. When done, the server downloads the MP4, uploads it into the private user folder, updates the row to completed and returns a signed URL. The process must survive browser refresh.
+
+DEFINITION OF DONE
+- npm run typecheck passes.
+- npm test passes.
+- npm run build passes.
+- No provider secret exists in the browser bundle.
+- Demo mode works without external accounts.
+- Production mode uses JWT-protected Supabase Edge Functions.
+- Existing capabilities are preserved or improved.
