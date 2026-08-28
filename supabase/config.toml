@@ -1,0 +1,11 @@
+[functions.generate-text]
+verify_jwt = true
+
+[functions.generate-image]
+verify_jwt = true
+
+[functions.generate-video]
+verify_jwt = true
+
+[functions.video-status]
+verify_jwt = true

@@ -2,7 +2,7 @@ import type { PromptTemplate } from "../types";
 export const PROMPT_TEMPLATES: PromptTemplate[] = [
   {
     id: "launch-post",
-    kind: "text",
+    type: "text",
     name: "Product launch",
     description: "A polished social launch announcement",
     tags: ["marketing", "social"],
@@ -12,7 +12,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
   },
   {
     id: "youtube-script",
-    kind: "text",
+    type: "text",
     name: "YouTube script",
     description: "Hook, value, story and CTA",
     tags: ["video", "creator"],
@@ -22,37 +22,37 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
   },
   {
     id: "cinematic-portrait",
-    kind: "image",
+    type: "image",
     name: "Cinematic portrait",
     description: "Editorial portrait with dramatic lighting",
     tags: ["portrait", "cinematic"],
     prompt:
       "A cinematic editorial portrait of [SUBJECT], confident expression, dramatic rim lighting, soft atmospheric haze, premium color grading, realistic skin texture, shallow depth of field, photographed on an 85mm lens.",
-    settings: { aspect_ratio: "3:4" },
+    settings: { aspect_ratio: "3:4", provider: "openai", model: "dall-e-3", n: 1, quality: "standard" },
   },
   {
     id: "product-hero",
-    kind: "image",
+    type: "image",
     name: "Product hero",
     description: "Premium advertising key visual",
     tags: ["product", "advertising"],
     prompt:
       "Premium advertising hero shot of [PRODUCT] on a sculptural pedestal, sophisticated studio lighting, subtle reflections, luxury commercial art direction, clean negative space for headline, photorealistic.",
-    settings: { aspect_ratio: "4:3" },
+    settings: { aspect_ratio: "4:3", provider: "openai", model: "dall-e-3", n: 1, quality: "hd" },
   },
   {
     id: "miniature-world",
-    kind: "image",
+    type: "image",
     name: "Miniature world",
     description: "Viral tiny-world visual",
     tags: ["miniature", "viral"],
     prompt:
       "An intricate miniature world where tiny artisans are creating [SUBJECT], macro photography, tilt-shift depth of field, handcrafted details, cinematic warm lighting, whimsical but photorealistic.",
-    settings: { aspect_ratio: "9:16" },
+    settings: { aspect_ratio: "9:16", provider: "google", model: "imagen-3.0-generate-002", n: 1, quality: "standard" },
   },
   {
     id: "cinematic-reveal",
-    kind: "video",
+    type: "video",
     name: "Cinematic reveal",
     description: "Eight-second product reveal with sound",
     tags: ["product", "cinematic"],
@@ -63,11 +63,12 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       resolution: "1080p",
       duration_seconds: 8,
       include_audio: true,
+      model: "veo-3.1-generate-preview",
     },
   },
   {
     id: "vertical-reel",
-    kind: "video",
+    type: "video",
     name: "Vertical reel",
     description: "Fast, energetic social video",
     tags: ["reel", "vertical"],
@@ -78,11 +79,12 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       resolution: "1080p",
       duration_seconds: 8,
       include_audio: true,
+      model: "veo-3.1-generate-preview",
     },
   },
   {
     id: "nature-orbit",
-    kind: "video",
+    type: "video",
     name: "Epic environment",
     description: "Slow cinematic environment shot",
     tags: ["nature", "atmosphere"],
@@ -93,6 +95,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       resolution: "1080p",
       duration_seconds: 8,
       include_audio: true,
+      model: "veo-3.1-generate-preview",
     },
   },
 ];

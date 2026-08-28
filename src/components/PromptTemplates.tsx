@@ -1,16 +1,16 @@
 import { LayoutTemplate, X } from "lucide-react";
 import { PROMPT_TEMPLATES } from "../config/templates";
-import type { GenerationKind, PromptTemplate } from "../types";
+import type { GenerationType, PromptTemplate } from "../types";
 export default function PromptTemplates({
-  kind,
+  type,
   onChoose,
   onClose,
 }: {
-  kind: GenerationKind;
+  type: GenerationType;
   onChoose: (t: PromptTemplate) => void;
   onClose: () => void;
 }) {
-  const items = PROMPT_TEMPLATES.filter((t) => t.kind === kind);
+  const items = PROMPT_TEMPLATES.filter((t) => t.type === type);
   return (
     <div
       className="modalBackdrop"

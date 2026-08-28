@@ -9,6 +9,7 @@ import {
   Video,
 } from "lucide-react";
 import type { Generation } from "../types";
+
 export default function GenerationCard({
   row,
   onFavorite,
@@ -23,13 +24,13 @@ export default function GenerationCard({
   return (
     <article className="generationCard">
       <div className="cardVisual">
-        {row.kind === "image" && row.asset_url ? (
-          <img src={row.asset_url} alt={row.prompt} />
-        ) : row.kind === "video" && row.asset_url ? (
-          <video src={row.asset_url} />
-        ) : row.kind === "text" ? (
+        {row.type === "image" && row.result_url ? (
+          <img src={row.result_url} alt={row.prompt} />
+        ) : row.type === "video" && row.result_url ? (
+          <video src={row.result_url} />
+        ) : row.type === "text" ? (
           <FileText />
-        ) : row.kind === "image" ? (
+        ) : row.type === "image" ? (
           <Image />
         ) : row.status === "processing" ? (
           <LoaderCircle className="spin" />
@@ -46,21 +47,21 @@ export default function GenerationCard({
       </div>
       <div className="cardContent">
         <small>
-          {row.kind.toUpperCase()} · {new Date(row.created_at).toLocaleString()}
+          {row.type.toUpperCase()} · {new Date(row.created_at).toLocaleString()}
         </small>
         <p>{row.prompt}</p>
         <footer>
           <span>{row.model}</span>
           <div>
-            {row.kind === "video" && row.status === "processing" && (
+            {row.type === "video" && row.status === "processing" && (
               <button title="Refresh" onClick={onRefresh}>
                 <RefreshCw />
               </button>
             )}
-            {row.asset_url && (
+            {row.result_url && (
               <a
                 title="Open"
-                href={row.asset_url}
+                href={row.result_url}
                 target="_blank"
                 rel="noreferrer"
               >

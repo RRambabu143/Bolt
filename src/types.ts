@@ -1,39 +1,48 @@
-export type GenerationKind = "text" | "image" | "video";
+export type GenerationType = "text" | "image" | "video";
 export type GenerationStatus = "queued" | "processing" | "completed" | "failed";
 export type Provider = "openai" | "google" | "demo";
-export interface GenerationSettings {
-  aspect_ratio?: "1:1" | "4:3" | "3:4" | "16:9" | "9:16";
-  resolution?: "720p" | "1080p" | "4k";
-  duration_seconds?: 4 | 6 | 8;
-  tone?: string;
-  format?: string;
-  creativity?: number;
-  negative_prompt?: string;
-  seed?: number;
-  include_audio?: boolean;
-  reference_image_url?: string;
+
+export interface TextSettings {
+  tone: string;
+  format: string;
+  creativity: number;
 }
+
+export interface ImageSettings {
+  provider: "openai" | "google";
+  model: string;
+  aspect_ratio: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
+  n: number;
+  quality: "standard" | "hd";
+}
+
+export interface VideoSettings {
+  model: string;
+  aspect_ratio: "16:9" | "9:16";
+  duration_seconds: 4 | 6 | 8;
+  resolution: "720p" | "1080p" | "4k";
+  include_audio: boolean;
+}
+
+export type GenerationSettings = TextSettings | ImageSettings | VideoSettings;
+
 export interface Generation {
   id: string;
   user_id: string;
-  kind: GenerationKind;
-  provider: Provider;
+  type: GenerationType;
   prompt: string;
-  enhanced_prompt: string | null;
-  model: string;
+  provider: string | null;
+  model: string | null;
   status: GenerationStatus;
-  output_text: string | null;
-  asset_url: string | null;
-  thumbnail_url: string | null;
-  storage_path: string | null;
-  provider_job_id: string | null;
-  settings: GenerationSettings;
+  result_url: string | null;
+  result_text: string | null;
   metadata: Record<string, unknown>;
-  error: string | null;
+  error_message: string | null;
   favorite: boolean;
   created_at: string;
   updated_at: string;
 }
+
 export interface UsageSummary {
   text: number;
   image: number;
@@ -42,19 +51,21 @@ export interface UsageSummary {
   daily_limit: number;
   remaining: number;
 }
+
 export interface GenerateRequest {
-  kind: GenerationKind;
+  type: GenerationType;
   prompt: string;
-  settings: GenerationSettings;
-  use_enhanced_prompt?: boolean;
+  settings: Record<string, unknown>;
 }
+
 export interface PromptTemplate {
   id: string;
-  kind: GenerationKind;
+  type: GenerationType;
   name: string;
   description: string;
   prompt: string;
   tags: string[];
-  settings?: GenerationSettings;
+  settings?: Record<string, unknown>;
 }
-export type HistoryFilter = "all" | GenerationKind | "favorites";
+
+export type HistoryFilter = "all" | GenerationType | "favorites";

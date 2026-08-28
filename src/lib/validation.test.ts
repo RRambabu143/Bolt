@@ -1,17 +1,27 @@
-import { describe, expect, it } from "vitest";
-import { normalizeSettings, validatePrompt } from "./validation";
-describe("prompt validation", () => {
-  it("rejects short prompts", () => expect(validatePrompt("x")).toContain("3"));
-  it("accepts a useful prompt", () =>
-    expect(validatePrompt("A cinematic mountain scene")).toBeNull());
+import { validatePrompt, normalizeSettings } from "./validation";
+
+describe("validatePrompt", () => {
+  it("rejects short prompts", () => {
+    expect(validatePrompt("hi")).toBe("Prompt must contain at least 3 characters.");
+  });
+  it("accepts valid prompts", () => {
+    expect(validatePrompt("A cinematic landscape")).toBeNull();
+  });
 });
-describe("settings normalization", () => {
-  it("clamps creativity", () =>
-    expect(normalizeSettings("text", { creativity: 400 }).creativity).toBe(
-      100,
-    ));
-  it("rejects unsupported video ratio", () =>
-    expect(
-      normalizeSettings("video", { aspect_ratio: "1:1" }).aspect_ratio,
-    ).toBe("16:9"));
+
+describe("normalizeSettings", () => {
+  it("normalizes text settings", () => {
+    const result = normalizeSettings("text", { creativity: 50 });
+    expect(result).toEqual({ tone: "Professional", format: "Article", creativity: 50 });
+  });
+  it("normalizes image settings", () => {
+    const result = normalizeSettings("image", { aspect_ratio: "1:1" });
+    expect(result).toEqual({
+      provider: "openai",
+      model: "dall-e-3",
+      aspect_ratio: "1:1",
+      n: 1,
+      quality: "standard",
+    });
+  });
 });

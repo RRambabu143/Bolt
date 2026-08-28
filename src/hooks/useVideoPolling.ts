@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { pollVideo } from "../lib/api";
+import { pollVideoStatus } from "../lib/api";
 import type { Generation } from "../types";
+
 export function useVideoPolling(
   row: Generation | null,
   onUpdate: (x: Generation) => void,
@@ -8,12 +9,12 @@ export function useVideoPolling(
 ) {
   const attempts = useRef(0);
   useEffect(() => {
-    if (!row || row.kind !== "video" || row.status !== "processing") return;
+    if (!row || row.type !== "video" || row.status !== "processing") return;
     attempts.current = 0;
     const timer = window.setInterval(async () => {
       try {
         attempts.current++;
-        const next = await pollVideo(row.id);
+        const next = await pollVideoStatus(row.id);
         onUpdate(next);
         if (next.status === "completed" || next.status === "failed")
           clearInterval(timer);

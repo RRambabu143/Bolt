@@ -4,11 +4,12 @@ import { RefreshCw, Search } from "lucide-react";
 import {
   deleteGeneration,
   listGenerations,
-  pollVideo,
+  pollVideoStatus,
   setFavorite,
 } from "../lib/api";
 import type { Generation, HistoryFilter } from "../types";
 import GenerationCard from "../components/GenerationCard";
+
 const FILTERS: [HistoryFilter, string][] = [
   ["all", "All"],
   ["text", "Text"],
@@ -16,25 +17,31 @@ const FILTERS: [HistoryFilter, string][] = [
   ["video", "Videos"],
   ["favorites", "Favorites"],
 ];
+
 export default function History() {
-  const [rows, setRows] = useState<Generation[]>([]),
-    [filter, setFilter] = useState<HistoryFilter>("all"),
-    [search, setSearch] = useState(""),
-    [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<Generation[]>([]);
+  const [filter, setFilter] = useState<HistoryFilter>("all");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
       setRows(await listGenerations(filter, search));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not load history");
+      const msg = e instanceof Error ? e.message : "Could not load history";
+      console.error("[MindMesh] History load error:", e);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   }, [filter, search]);
+
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
   }, [load]);
+
   async function remove(id: string) {
     if (!confirm("Permanently delete this generation and its cloud asset?"))
       return;
@@ -46,6 +53,7 @@ export default function History() {
       toast.error(e instanceof Error ? e.message : "Delete failed");
     }
   }
+
   async function favorite(row: Generation) {
     try {
       const next = await setFavorite(row.id, !row.favorite);
@@ -54,15 +62,17 @@ export default function History() {
       toast.error(e instanceof Error ? e.message : "Update failed");
     }
   }
+
   async function refresh(row: Generation) {
     try {
-      const next = await pollVideo(row.id);
+      const next = await pollVideoStatus(row.id);
       setRows((x) => x.map((r) => (r.id === row.id ? next : r)));
       toast.success("Status: " + next.status);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Refresh failed");
     }
   }
+
   return (
     <div className="page">
       <div className="historyHead">
@@ -122,6 +132,7 @@ export default function History() {
     </div>
   );
 }
+
 function Loader() {
   return <RefreshCw className="spin" />;
 }

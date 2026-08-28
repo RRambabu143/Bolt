@@ -9,61 +9,75 @@ import {
   WandSparkles,
   Video,
 } from "lucide-react";
-import { enhancePrompt, generate, pollVideo } from "../lib/api";
+import { enhancePrompt, generate, pollVideoStatus } from "../lib/api";
 import { MODEL_DISPLAY } from "../config/models";
 import type {
   Generation,
-  GenerationKind,
-  GenerationSettings,
+  GenerationType,
   PromptTemplate,
 } from "../types";
 import PromptTemplates from "../components/PromptTemplates";
-import SettingsPanel from "../components/SettingsPanel";
+import SettingsPanel, {
+  type SettingsValue,
+} from "../components/SettingsPanel";
 import ResultViewer from "../components/ResultViewer";
 import { useVideoPolling } from "../hooks/useVideoPolling";
+
 const MODES = [
   {
-    kind: "text" as const,
+    type: "text" as const,
     label: "Write",
     sub: "Ideas into words",
     icon: FileText,
   },
   {
-    kind: "image" as const,
+    type: "image" as const,
     label: "Imagine",
     sub: "Words into visuals",
     icon: Image,
   },
   {
-    kind: "video" as const,
+    type: "video" as const,
     label: "Direct",
     sub: "Stories into motion",
     icon: Video,
   },
 ];
-const defaults: Record<GenerationKind, GenerationSettings> = {
+
+const defaultSettings: Record<GenerationType, SettingsValue> = {
   text: { tone: "Professional", format: "Article", creativity: 60 },
-  image: { aspect_ratio: "1:1", negative_prompt: "" },
+  image: {
+    provider: "openai",
+    model: "dall-e-3",
+    aspect_ratio: "1:1",
+    n: 1,
+    quality: "standard",
+  },
   video: {
+    model: "veo-3.1-generate-preview",
     aspect_ratio: "16:9",
-    resolution: "720p",
     duration_seconds: 8,
+    resolution: "720p",
     include_audio: true,
   },
 };
+
 export default function Studio() {
-  const [kind, setKind] = useState<GenerationKind>("text"),
-    [prompt, setPrompt] = useState(""),
-    [settings, setSettings] = useState(defaults.text),
-    [result, setResult] = useState<Generation | null>(null),
-    [busy, setBusy] = useState(false),
-    [enhancing, setEnhancing] = useState(false),
-    [templates, setTemplates] = useState(false);
+  const [type, setType] = useState<GenerationType>("text");
+  const [prompt, setPrompt] = useState("");
+  const [settings, setSettings] = useState<SettingsValue>(defaultSettings.text);
+  const [result, setResult] = useState<Generation | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [templates, setTemplates] = useState(false);
+
   useEffect(() => {
-    setSettings(defaults[kind]);
+    setSettings(defaultSettings[type]);
     setResult(null);
-  }, [kind]);
+  }, [type]);
+
   useVideoPolling(result, setResult, (m) => toast.error(m));
+
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
@@ -73,51 +87,66 @@ export default function Studio() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [prompt, settings, kind, busy]);
+  }, [prompt, settings, type, busy]);
+
   async function create() {
     if (prompt.trim().length < 3)
       return toast.error("Describe what you want to create");
     setBusy(true);
     setResult(null);
     try {
-      const row = await generate({ kind, prompt: prompt.trim(), settings });
+      const row = await generate({
+        type,
+        prompt: prompt.trim(),
+        settings: settings as unknown as Record<string, unknown>,
+      });
       setResult(row);
-      toast.success(kind === "video" ? "Veo job started" : "Creation complete");
+      toast.success(type === "video" ? "Veo job started" : "Creation complete");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Generation failed");
+      const msg = e instanceof Error ? e.message : "Generation failed";
+      console.error("[MindMesh] Generation error:", e);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
   }
+
   async function improve() {
     if (prompt.trim().length < 3)
       return toast.error("Write a short idea first");
     setEnhancing(true);
     try {
-      setPrompt(await enhancePrompt(prompt, kind));
+      setPrompt(await enhancePrompt(prompt, type));
       toast.success("Prompt enhanced");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not enhance prompt");
+      const msg = e instanceof Error ? e.message : "Could not enhance prompt";
+      console.error("[MindMesh] Enhance error:", e);
+      toast.error(msg);
     } finally {
       setEnhancing(false);
     }
   }
+
   async function check() {
     if (!result) return;
     setBusy(true);
     try {
-      setResult(await pollVideo(result.id));
+      setResult(await pollVideoStatus(result.id));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Status check failed");
     } finally {
       setBusy(false);
     }
   }
+
   function choose(t: PromptTemplate) {
     setPrompt(t.prompt);
-    setSettings({ ...defaults[kind], ...t.settings });
+    if (t.settings) {
+      setSettings({ ...defaultSettings[type], ...t.settings } as SettingsValue);
+    }
     setTemplates(false);
   }
+
   return (
     <div className="page">
       <div className="pageIntro">
@@ -132,16 +161,16 @@ export default function Studio() {
       <div className="modeGrid">
         {MODES.map((m) => (
           <button
-            key={m.kind}
-            className={kind === m.kind ? "active" : ""}
-            onClick={() => setKind(m.kind)}
+            key={m.type}
+            className={type === m.type ? "active" : ""}
+            onClick={() => setType(m.type)}
           >
             <m.icon />
             <span>
               <b>{m.label}</b>
               <small>{m.sub}</small>
             </span>
-            <i>{MODEL_DISPLAY[m.kind].name}</i>
+            <i>{MODEL_DISPLAY[m.type].name}</i>
           </button>
         ))}
       </div>
@@ -149,9 +178,9 @@ export default function Studio() {
         <section className="promptPanel">
           <div className="panelHeader">
             <span>
-              <b>{kind[0].toUpperCase() + kind.slice(1)} generation</b>
+              <b>{type[0].toUpperCase() + type.slice(1)} generation</b>
               <small>
-                {MODEL_DISPLAY[kind].provider} · {MODEL_DISPLAY[kind].name}
+                {MODEL_DISPLAY[type].provider} · {MODEL_DISPLAY[type].name}
               </small>
             </span>
             <button onClick={() => setTemplates(true)}>
@@ -178,24 +207,28 @@ export default function Studio() {
               <span>{prompt.length}/4000</span>
             </footer>
           </div>
-          <SettingsPanel kind={kind} value={settings} onChange={setSettings} />
+          <SettingsPanel
+            type={type}
+            value={settings}
+            onChange={setSettings}
+          />
           <button
             className="primary generateButton"
             onClick={create}
             disabled={busy}
           >
             {busy ? <LoaderCircle className="spin" /> : <Sparkles />}
-            {busy ? "Creating…" : "Generate " + kind}
+            {busy ? "Creating…" : `Generate ${type}`}
             <kbd>⌘ ↵</kbd>
           </button>
         </section>
         <section className="outputPanel">
-          <ResultViewer kind={kind} row={result} onCheck={check} busy={busy} />
+          <ResultViewer type={type} row={result} onCheck={check} busy={busy} />
         </section>
       </div>
       {templates && (
         <PromptTemplates
-          kind={kind}
+          type={type}
           onChoose={choose}
           onClose={() => setTemplates(false)}
         />

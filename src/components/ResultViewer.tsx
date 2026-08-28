@@ -11,40 +11,45 @@ import {
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { exportText } from "../lib/api";
-import type { Generation, GenerationKind } from "../types";
+import type { Generation, GenerationType } from "../types";
+
 export default function ResultViewer({
-  kind,
+  type,
   row,
   onCheck,
   busy,
 }: {
-  kind: GenerationKind;
+  type: GenerationType;
   row: Generation | null;
   onCheck: () => void;
   busy: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+
   async function copy() {
-    await navigator.clipboard.writeText(row?.output_text || "");
+    await navigator.clipboard.writeText(row?.result_text || "");
     setCopied(true);
     toast.success("Copied");
     setTimeout(() => setCopied(false), 1500);
   }
+
   if (!row)
     return (
       <div className="emptyResult">
-        <div>{kind === "text" ? <FileText /> : <Play />}</div>
+        <div>{type === "text" ? <FileText /> : <Play />}</div>
         <h3>Your creation appears here</h3>
         <p>Enter a prompt, adjust the settings, and generate.</p>
       </div>
     );
+
   if (row.status === "failed")
     return (
       <div className="emptyResult error">
         <h3>Generation failed</h3>
-        <p>{row.error || "The provider did not complete this request."}</p>
+        <p>{row.error_message || "The provider did not complete this request."}</p>
       </div>
     );
+
   if (row.status !== "completed")
     return (
       <div className="emptyResult">
@@ -60,15 +65,22 @@ export default function ResultViewer({
         </button>
       </div>
     );
+
+  const allUrls = (row.metadata?.all_urls as string[] | undefined) || (row.result_url ? [row.result_url] : []);
+
   return (
     <div className="resultViewer">
       <div className="resultCanvas">
-        {row.kind === "text" ? (
-          <article>{row.output_text}</article>
-        ) : row.kind === "image" ? (
-          <img src={row.asset_url!} alt={row.prompt} />
+        {row.type === "text" ? (
+          <article>{row.result_text}</article>
+        ) : row.type === "image" ? (
+          <div className="imageGrid">
+            {allUrls.map((url, i) => (
+              <img key={i} src={url} alt={`${row.prompt} ${i + 1}`} />
+            ))}
+          </div>
         ) : (
-          <video controls autoPlay={false} src={row.asset_url!} />
+          <video controls autoPlay={false} src={row.result_url!} />
         )}
       </div>
       <footer>
@@ -80,7 +92,7 @@ export default function ResultViewer({
           <small>{row.model}</small>
         </span>
         <div>
-          {row.kind === "text" ? (
+          {row.type === "text" ? (
             <>
               <button className="iconButton" onClick={copy}>
                 {copied ? <Check /> : <Copy />}
@@ -93,7 +105,7 @@ export default function ResultViewer({
           ) : (
             <a
               className="secondary"
-              href={row.asset_url!}
+              href={row.result_url!}
               target="_blank"
               rel="noreferrer"
             >
