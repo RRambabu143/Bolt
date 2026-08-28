@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
 
     if (!googleKey) {
       return new Response(
-        JSON.stringify({ success: false, error: "GOOGLE_API_KEY is missing", details: "Set it with: npx supabase secrets set GOOGLE_API_KEY=..." }),
+        JSON.stringify({ success: false, error: "GOOGLE_API_KEY is missing", details: "The GOOGLE_API_KEY secret has not been configured." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -48,7 +48,7 @@ Deno.serve(async (req: Request) => {
     const { prompt, settings } = body;
     const model = Deno.env.get("GOOGLE_VIDEO_MODEL") || "veo-3.1-generate-preview";
     const aspectRatio = settings?.aspect_ratio || "16:9";
-    const durationSeconds = settings?.duration_seconds || 8;
+    const durationSeconds = String(settings?.duration_seconds || 8);
     const resolution = settings?.resolution || "720p";
     const includeAudio = settings?.include_audio !== false;
 
@@ -68,25 +68,31 @@ Deno.serve(async (req: Request) => {
         provider: "google",
         model,
         status: "processing",
-        metadata: { aspect_ratio: aspectRatio, duration_seconds: durationSeconds, resolution, include_audio, settings: settings || {} },
+        metadata: { aspect_ratio: aspectRatio, duration_seconds: durationSeconds, resolution, include_audio: includeAudio, settings: settings || {} },
       })
       .select()
       .single();
 
     if (dbErr) {
+      console.error(`[generate-video] DB insert error: ${dbErr.message}`);
       return new Response(
         JSON.stringify({ success: false, error: "Database write failed", details: dbErr.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    console.log(`[generate-video] model=${model} aspect=${aspectRatio} duration=${durationSeconds}s resolution=${resolution} audio=${includeAudio}`);
+
     EdgeRuntime.waitUntil((async () => {
       try {
         const videoResponse = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning?key=${googleKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predictLongRunning`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": googleKey,
+            },
             body: JSON.stringify({
               instances: [{ prompt }],
               parameters: {
@@ -94,6 +100,7 @@ Deno.serve(async (req: Request) => {
                 durationSeconds,
                 resolution,
                 generateAudio: includeAudio,
+                personGeneration: "allow_adult",
               },
             }),
           },
@@ -107,6 +114,7 @@ Deno.serve(async (req: Request) => {
             errMessage = errJson.error?.message || errMessage;
           } catch { /* use default */ }
 
+          console.error(`[generate-video] Veo submit error ${videoResponse.status}: ${errMessage}`);
           await supabase.from("generations").update({
             status: "failed",
             error_message: errMessage,
@@ -117,6 +125,8 @@ Deno.serve(async (req: Request) => {
         const videoData = await videoResponse.json();
         const operationName = videoData.name;
 
+        console.log(`[generate-video] Operation started: ${operationName}`);
+
         let attempts = 0;
         const maxAttempts = 120;
         const pollInterval = 10000;
@@ -126,14 +136,24 @@ Deno.serve(async (req: Request) => {
           attempts++;
 
           const pollResponse = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/${operationName}?key=${googleKey}`,
+            `https://generativelanguage.googleapis.com/v1beta/${operationName}`,
+            {
+              headers: {
+                "x-goog-api-key": googleKey,
+              },
+            },
           );
 
-          if (!pollResponse.ok) continue;
+          if (!pollResponse.ok) {
+            console.warn(`[generate-video] Poll attempt ${attempts} returned ${pollResponse.status}`);
+            continue;
+          }
 
           const pollData = await pollResponse.json();
+
           if (pollData.done) {
             if (pollData.error) {
+              console.error(`[generate-video] Operation failed: ${pollData.error.message}`);
               await supabase.from("generations").update({
                 status: "failed",
                 error_message: pollData.error.message || "Video generation failed",
@@ -141,17 +161,24 @@ Deno.serve(async (req: Request) => {
               return;
             }
 
-            const videoUri = pollData.response?.generatedSamples?.[0]?.video?.uri;
+            // Response path: response.generateVideoResponse.generatedSamples[0].video.uri
+            const videoUri = pollData.response?.generateVideoResponse?.generatedSamples?.[0]?.video?.uri
+              || pollData.response?.generatedSamples?.[0]?.video?.uri;
+
             if (!videoUri) {
+              console.error("[generate-video] No video URI in response");
               await supabase.from("generations").update({
                 status: "failed",
-                error_message: "No video URL returned",
+                error_message: "No video URL returned from provider",
               }).eq("id", row.id);
               return;
             }
 
+            console.log(`[generate-video] Downloading video from ${videoUri.substring(0, 80)}...`);
+
             const videoFetch = await fetch(`${videoUri}&key=${googleKey}`);
             if (!videoFetch.ok) {
+              console.error(`[generate-video] Video download failed: ${videoFetch.status}`);
               await supabase.from("generations").update({
                 status: "failed",
                 error_message: "Failed to download video from provider",
@@ -166,6 +193,7 @@ Deno.serve(async (req: Request) => {
               .upload(filePath, videoBytes, { contentType: "video/mp4" });
 
             if (uploadErr) {
+              console.error(`[generate-video] Storage upload failed: ${uploadErr.message}`);
               await supabase.from("generations").update({
                 status: "failed",
                 error_message: "Storage upload failed: " + uploadErr.message,
@@ -175,6 +203,8 @@ Deno.serve(async (req: Request) => {
 
             const { data: { publicUrl } } = supabase.storage.from("generated-videos").getPublicUrl(filePath);
 
+            console.log(`[generate-video] Video uploaded to ${publicUrl}`);
+
             await supabase.from("generations").update({
               status: "completed",
               result_url: publicUrl,
@@ -182,13 +212,19 @@ Deno.serve(async (req: Request) => {
             }).eq("id", row.id);
             return;
           }
+
+          if (attempts % 5 === 0) {
+            console.log(`[generate-video] Still polling... attempt ${attempts}/${maxAttempts}`);
+          }
         }
 
+        console.error("[generate-video] Timed out after " + maxAttempts + " attempts");
         await supabase.from("generations").update({
           status: "failed",
           error_message: "Video generation timed out",
         }).eq("id", row.id);
       } catch (err) {
+        console.error(`[generate-video] Background task error: ${err.message}`);
         await supabase.from("generations").update({
           status: "failed",
           error_message: err.message,
@@ -201,6 +237,7 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
+    console.error(`[generate-video] Unhandled error: ${err.message}`);
     return new Response(
       JSON.stringify({ success: false, error: "Generation failed", details: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

@@ -5,17 +5,17 @@ export const MODEL_DISPLAY: Record<
   { name: string; provider: string; detail: string }
 > = {
   text: {
-    name: "GPT-4o",
+    name: "GPT-5.6",
     provider: "OpenAI",
     detail: "Advanced writing and reasoning",
   },
   image: {
-    name: "DALL-E 3",
-    provider: "OpenAI",
+    name: "GPT-Image-2",
+    provider: "OpenAI / Google",
     detail: "High-quality image generation",
   },
   video: {
-    name: "Veo 3.1",
+    name: "Veo 3.1 Lite",
     provider: "Google",
     detail: "Cinematic video with native audio",
   },
@@ -52,8 +52,8 @@ export const VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"] as const;
 export const VIDEO_DURATIONS = [4, 6, 8] as const;
 
 export const IMAGE_PROVIDERS = [
-  { value: "openai" as const, label: "OpenAI DALL-E", model: "dall-e-3" },
-  { value: "google" as const, label: "Google Imagen", model: "imagen-3.0-generate-002" },
+  { value: "openai" as const, label: "OpenAI GPT-Image-2", model: "gpt-image-2" },
+  { value: "google" as const, label: "Google Gemini Flash", model: "gemini-3.1-flash-image" },
 ];
 
 export const IMAGE_QUALITIES = ["standard", "hd"] as const;

@@ -50,15 +50,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const sizeMap: Record<string, string> = {
-      "1:1": "1024x1024",
-      "16:9": "1792x1024",
-      "9:16": "1024x1792",
-      "4:3": "1024x1024",
-      "3:4": "1024x1024",
-    };
-    const size = sizeMap[aspectRatio] || "1024x1024";
-
     let imageUrls: string[] = [];
     let model = "";
 
@@ -66,21 +57,36 @@ Deno.serve(async (req: Request) => {
       const googleKey = Deno.env.get("GOOGLE_API_KEY");
       if (!googleKey) {
         return new Response(
-          JSON.stringify({ success: false, error: "GOOGLE_API_KEY is missing", details: "Set it with: npx supabase secrets set GOOGLE_API_KEY=..." }),
+          JSON.stringify({ success: false, error: "GOOGLE_API_KEY is missing", details: "The GOOGLE_API_KEY secret has not been configured." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      model = Deno.env.get("GOOGLE_IMAGE_MODEL") || "imagen-3.0-generate-002";
+      model = Deno.env.get("GOOGLE_IMAGE_MODEL") || "gemini-3.1-flash-image";
 
+      console.log(`[generate-image] Google model=${model} aspect=${aspectRatio} n=${n}`);
+
+      // Use Gemini generateContent API with responseModalities for native image generation models
       const googleResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateImages?key=${googleKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": googleKey,
+          },
           body: JSON.stringify({
-            prompt,
-            number_of_images: n,
-            aspect_ratio: aspectRatio,
+            contents: [
+              {
+                role: "user",
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              responseModalities: ["TEXT", "IMAGE"],
+              imageConfig: {
+                aspectRatio: aspectRatio,
+              },
+            },
           }),
         },
       );
@@ -93,6 +99,8 @@ Deno.serve(async (req: Request) => {
           errMessage = errJson.error?.message || errMessage;
         } catch { /* use default */ }
 
+        console.error(`[generate-image] Google error ${googleResponse.status}: ${errMessage}`);
+
         if (googleResponse.status === 429) {
           return new Response(
             JSON.stringify({ success: false, error: "Provider returned HTTP 429", details: errMessage }),
@@ -101,29 +109,61 @@ Deno.serve(async (req: Request) => {
         }
 
         return new Response(
-          JSON.stringify({ success: false, error: "Google API authentication failed", details: errMessage }),
+          JSON.stringify({ success: false, error: "Google API request failed", details: errMessage }),
           { status: googleResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
       const googleData = await googleResponse.json();
-      const images = googleData.predictions || googleData.images || [];
-      for (const img of images) {
-        if (img.bytesBase64Encoded) {
-          imageUrls.push(`data:image/png;base64,${img.bytesBase64Encoded}`);
-        } else if (img.url) {
-          imageUrls.push(img.url);
+
+      // Extract images from candidates[].content.parts[]
+      const candidates = googleData.candidates || [];
+      for (const candidate of candidates) {
+        const parts = candidate?.content?.parts || [];
+        for (const part of parts) {
+          if (part.inlineData?.data) {
+            const mimeType = part.inlineData.mimeType || "image/png";
+            const ext = mimeType.includes("jpeg") ? "jpg" : "png";
+            imageUrls.push(`data:${mimeType};base64,${part.inlineData.data}`);
+          } else if (part.inlineData?.inlineData) {
+            // Some responses nest differently
+            const data = part.inlineData.inlineData;
+            if (data?.data) {
+              const mimeType = data.mimeType || "image/png";
+              imageUrls.push(`data:${mimeType};base64,${data.data}`);
+            }
+          }
         }
       }
+
+      console.log(`[generate-image] Google returned ${imageUrls.length} images`);
     } else {
       const openaiKey = Deno.env.get("OPENAI_API_KEY");
       if (!openaiKey) {
         return new Response(
-          JSON.stringify({ success: false, error: "OPENAI_API_KEY is missing", details: "Set it with: npx supabase secrets set OPENAI_API_KEY=sk-..." }),
+          JSON.stringify({ success: false, error: "OPENAI_API_KEY is missing", details: "The OPENAI_API_KEY secret has not been configured." }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
-      model = Deno.env.get("OPENAI_IMAGE_MODEL") || "dall-e-3";
+      model = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-1";
+
+      const sizeMap: Record<string, string> = {
+        "1:1": "1024x1024",
+        "16:9": "1536x1024",
+        "9:16": "1024x1536",
+        "4:3": "1024x1024",
+        "3:4": "1024x1024",
+      };
+      const size = sizeMap[aspectRatio] || "1024x1024";
+
+      // gpt-image-2 uses low/medium/high/auto instead of standard/hd
+      const qualityMap: Record<string, string> = {
+        "standard": "medium",
+        "hd": "high",
+      };
+      const openaiQuality = qualityMap[quality] || "auto";
+
+      console.log(`[generate-image] OpenAI model=${model} size=${size} quality=${openaiQuality} n=${n}`);
 
       const openaiResponse = await fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
@@ -136,8 +176,8 @@ Deno.serve(async (req: Request) => {
           prompt,
           n: Math.min(1, n),
           size,
-          quality,
-          response_format: "b64_json",
+          quality: openaiQuality,
+          output_format: "png",
         }),
       });
 
@@ -148,6 +188,8 @@ Deno.serve(async (req: Request) => {
           const errJson = JSON.parse(errText);
           errMessage = errJson.error?.message || errMessage;
         } catch { /* use default */ }
+
+        console.error(`[generate-image] OpenAI error ${openaiResponse.status}: ${errMessage}`);
 
         if (openaiResponse.status === 429) {
           return new Response(
@@ -170,6 +212,8 @@ Deno.serve(async (req: Request) => {
           imageUrls.push(img.url);
         }
       }
+
+      console.log(`[generate-image] OpenAI returned ${imageUrls.length} images`);
     }
 
     if (imageUrls.length === 0) {
@@ -179,6 +223,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Upload images to storage and get public URLs
     const storedUrls: string[] = [];
     for (let i = 0; i < imageUrls.length; i++) {
       const dataUrl = imageUrls[i];
@@ -191,7 +236,7 @@ Deno.serve(async (req: Request) => {
           .upload(filePath, bytes, { contentType: "image/png" });
 
         if (uploadErr) {
-          console.error("Storage upload failed:", uploadErr.message);
+          console.error(`[generate-image] Storage upload failed: ${uploadErr.message}`);
           storedUrls.push(dataUrl);
         } else {
           const { data: { publicUrl } } = supabase.storage.from("generated-images").getPublicUrl(filePath);
@@ -219,6 +264,7 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (dbErr) {
+      console.error(`[generate-image] DB error: ${dbErr.message}`);
       return new Response(
         JSON.stringify({ success: false, error: "Database write failed", details: dbErr.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -230,6 +276,7 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
+    console.error(`[generate-image] Unhandled error: ${err.message}`);
     return new Response(
       JSON.stringify({ success: false, error: "Generation failed", details: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },

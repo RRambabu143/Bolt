@@ -28,7 +28,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["portrait", "cinematic"],
     prompt:
       "A cinematic editorial portrait of [SUBJECT], confident expression, dramatic rim lighting, soft atmospheric haze, premium color grading, realistic skin texture, shallow depth of field, photographed on an 85mm lens.",
-    settings: { aspect_ratio: "3:4", provider: "openai", model: "dall-e-3", n: 1, quality: "standard" },
+    settings: { aspect_ratio: "3:4", provider: "openai", model: "gpt-image-2", n: 1, quality: "standard" },
   },
   {
     id: "product-hero",
@@ -38,7 +38,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["product", "advertising"],
     prompt:
       "Premium advertising hero shot of [PRODUCT] on a sculptural pedestal, sophisticated studio lighting, subtle reflections, luxury commercial art direction, clean negative space for headline, photorealistic.",
-    settings: { aspect_ratio: "4:3", provider: "openai", model: "dall-e-3", n: 1, quality: "hd" },
+    settings: { aspect_ratio: "4:3", provider: "openai", model: "gpt-image-2", n: 1, quality: "hd" },
   },
   {
     id: "miniature-world",
@@ -48,7 +48,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["miniature", "viral"],
     prompt:
       "An intricate miniature world where tiny artisans are creating [SUBJECT], macro photography, tilt-shift depth of field, handcrafted details, cinematic warm lighting, whimsical but photorealistic.",
-    settings: { aspect_ratio: "9:16", provider: "google", model: "imagen-3.0-generate-002", n: 1, quality: "standard" },
+    settings: { aspect_ratio: "9:16", provider: "google", model: "gemini-3.1-flash-image", n: 1, quality: "standard" },
   },
   {
     id: "cinematic-reveal",
@@ -63,7 +63,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       resolution: "1080p",
       duration_seconds: 8,
       include_audio: true,
-      model: "veo-3.1-generate-preview",
+      model: "veo-3.1-lite-generate-preview",
     },
   },
   {
@@ -79,7 +79,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       resolution: "1080p",
       duration_seconds: 8,
       include_audio: true,
-      model: "veo-3.1-generate-preview",
+      model: "veo-3.1-lite-generate-preview",
     },
   },
   {
@@ -95,7 +95,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
       resolution: "1080p",
       duration_seconds: 8,
       include_audio: true,
-      model: "veo-3.1-generate-preview",
+      model: "veo-3.1-lite-generate-preview",
     },
   },
 ];
