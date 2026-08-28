@@ -180,8 +180,8 @@ export default function SettingsPanel({
               value={(value as VideoSettingsValue).model}
               onChange={(e) => patch({ model: e.target.value })}
             >
-              <option value="veo-3.1-generate-preview">Veo 3.1</option>
-              <option value="veo-3.0-generate-preview">Veo 3.0</option>
+              <option value="veo-3.1-lite-generate-preview">Veo 3.1 Lite</option>
+              <option value="veo-3.1-generate-preview">Veo 3.1 Pro</option>
             </select>
           </label>
           <label>

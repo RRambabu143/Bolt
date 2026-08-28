@@ -54,7 +54,7 @@ const defaultSettings: Record<GenerationType, SettingsValue> = {
     quality: "standard",
   },
   video: {
-    model: "veo-3.1-generate-preview",
+    model: "veo-3.1-lite-generate-preview",
     aspect_ratio: "16:9",
     duration_seconds: 8,
     resolution: "720p",
