@@ -50,6 +50,27 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Deduct 10 Mind Chips for image generation
+    const COST = 10;
+    const { data: newBalance, error: deductErr } = await userClient.rpc("deduct_mind_chips", {
+      p_amount: COST,
+      p_description: "Image Generation",
+      p_generation_type: "image",
+    });
+    if (deductErr) {
+      const msg = deductErr.message || "Deduction failed";
+      if (msg.includes("INSUFFICIENT_BALANCE")) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Not enough Mind Chips", details: msg.replace("INSUFFICIENT_BALANCE: ", "") }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to deduct Mind Chips", details: msg }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     let imageUrls: string[] = [];
     let model = "";
 
@@ -100,6 +121,8 @@ Deno.serve(async (req: Request) => {
         } catch { /* use default */ }
 
         console.error(`[generate-image] Google error ${googleResponse.status}: ${errMessage}`);
+
+        await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
 
         if (googleResponse.status === 429) {
           return new Response(
@@ -191,6 +214,8 @@ Deno.serve(async (req: Request) => {
 
         console.error(`[generate-image] OpenAI error ${openaiResponse.status}: ${errMessage}`);
 
+        await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
+
         if (openaiResponse.status === 429) {
           return new Response(
             JSON.stringify({ success: false, error: "Provider returned HTTP 429", details: errMessage }),
@@ -217,6 +242,7 @@ Deno.serve(async (req: Request) => {
     }
 
     if (imageUrls.length === 0) {
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
       return new Response(
         JSON.stringify({ success: false, error: "Generation failed", details: "No images returned from provider" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -265,6 +291,7 @@ Deno.serve(async (req: Request) => {
 
     if (dbErr) {
       console.error(`[generate-image] DB error: ${dbErr.message}`);
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
       return new Response(
         JSON.stringify({ success: false, error: "Database write failed", details: dbErr.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -272,7 +299,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: row }),
+      JSON.stringify({ success: true, data: row, balance: newBalance }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {

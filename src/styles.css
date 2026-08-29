@@ -146,6 +146,22 @@ aside {
   color: #676a76;
   font-size: 8px;
 }
+.chipsBar {
+  height: 4px;
+  border-radius: 4px;
+  background: #292b34;
+  margin: 12px 0 9px;
+  overflow: hidden;
+}
+.chipsBar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #a7f36b, #6ee7b7);
+  transition: width 0.4s ease;
+}
+.mindChips > span svg {
+  color: #a7f36b;
+}
 .profile {
   margin-top: 13px;
   padding-top: 15px;
@@ -506,8 +522,13 @@ main > header b {
 }
 .generateButton kbd {
   margin-left: auto;
-  font: 8px DM Sans;
-  opacity: 0.55;
+  font: 9px DM Sans;
+  opacity: 0.7;
+  background: #2a2d22;
+  border: 1px solid #3a4030;
+  border-radius: 6px;
+  padding: 3px 8px;
+  color: #a7f36b;
 }
 .outputPanel {
   display: flex;
@@ -907,6 +928,80 @@ main > header b {
 }
 .emptyState h3 {
   color: #ddd;
+}
+.chipsSummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin: 28px 0;
+}
+.chipsCard {
+  border: 1px solid #252731;
+  background: #13141a;
+  border-radius: 13px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chipsLabel {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #777a87;
+}
+.chipsCard b {
+  font: 700 32px Manrope;
+  color: #e7e5e0;
+  letter-spacing: -1.5px;
+}
+.txnSection {
+  margin-top: 14px;
+}
+.txnSection h2 {
+  font: 700 18px Manrope;
+  margin: 0 0 14px;
+  color: #ddd;
+}
+.txnList {
+  border: 1px solid #252731;
+  border-radius: 13px;
+  overflow: hidden;
+}
+.txnRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #202129;
+}
+.txnRow:last-child {
+  border-bottom: 0;
+}
+.txnAmount {
+  font-weight: 700;
+  font-size: 13px;
+  min-width: 160px;
+}
+.txnAmount.positive {
+  color: #a7f36b;
+}
+.txnAmount.negative {
+  color: #f36b6b;
+}
+.txnDesc {
+  flex: 1;
+  font-size: 12px;
+  color: #aaa;
+}
+.txnDesc small {
+  color: #676a76;
+  text-transform: capitalize;
+}
+.txnDate {
+  font-size: 10px;
+  color: #676a76;
+  white-space: nowrap;
 }
 .auth {
   min-height: 100vh;

@@ -6,6 +6,7 @@ import { demoMode } from "./lib/api";
 import Auth from "./pages/Auth";
 import Studio from "./pages/Studio";
 import History from "./pages/History";
+import MindChips from "./pages/MindChips";
 import Shell from "./components/Shell";
 export default function App() {
   const [session, setSession] = useState<Session | null>(null),
@@ -50,6 +51,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Studio />} />
         <Route path="/history" element={<History />} />
+        <Route path="/mind-chips" element={<MindChips />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Shell>

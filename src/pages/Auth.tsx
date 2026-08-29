@@ -16,7 +16,9 @@ export default function Auth() {
     setBusy(false);
     r.error
       ? toast.error(r.error.message)
-      : toast.success(signup ? "Check your email" : "Welcome back");
+      : signup
+        ? toast.success("Welcome to MindMesh! You received 500 free Mind Chips.")
+        : toast.success("Welcome back");
   }
   return (
     <div className="auth">

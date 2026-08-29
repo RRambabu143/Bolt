@@ -1,31 +1,47 @@
 import { useEffect, useState } from "react";
-import { Zap } from "lucide-react";
-import { getUsage } from "../lib/api";
-import type { UsageSummary } from "../types";
+import { Brain } from "lucide-react";
+import { getMindChipsBalance } from "../lib/api";
+import { demoMode } from "../lib/api";
+import { demo } from "../lib/demo";
+
 export default function UsageMeter() {
-  const [u, setU] = useState<UsageSummary | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+
   useEffect(() => {
-    getUsage()
-      .then(setU)
+    if (demoMode) {
+      setBalance(demo.mindChipsBalance());
+      return;
+    }
+    getMindChipsBalance()
+      .then(setBalance)
       .catch(() => {});
   }, []);
-  if (!u) return null;
-  const pct = Math.min(100, Math.round((u.total / u.daily_limit) * 100));
+
+  if (balance === null) return null;
+
   return (
-    <div className="usage">
+    <div className="usage mindChips">
       <span>
-        <Zap />
-        <b>Daily usage</b>
-        <small>{u.remaining} generations remaining</small>
+        <Brain />
+        <b>Mind Chips</b>
+        <small>{balance} Mind Chips Balance</small>
       </span>
-      <div className="usageBar">
-        <i style={{ width: pct + "%" }} />
+      <div className="chipsBar">
+        <i style={{ width: Math.min(100, (balance / 500) * 100) + "%" }} />
       </div>
       <footer>
-        <span>Text {u.text}</span>
-        <span>Image {u.image}</span>
-        <span>Video {u.video}</span>
+        <span>Text 1 Chip</span>
+        <span>Image 10 Chips</span>
+        <span>Video 50 Chips</span>
       </footer>
     </div>
   );
+}
+
+export function useBalanceRefresher() {
+  const [refreshKey, setRefreshKey] = useState(0);
+  return {
+    refreshKey,
+    refresh: () => setRefreshKey((k) => k + 1),
+  };
 }

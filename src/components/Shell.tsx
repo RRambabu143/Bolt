@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { BookOpen, History, LogOut, Sparkles } from "lucide-react";
+import { BookOpen, Brain, History, LogOut, Sparkles } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { demoMode } from "../lib/api";
 import UsageMeter from "./UsageMeter";
@@ -29,6 +29,10 @@ export default function Shell({
           <NavLink to="/history">
             <History />
             History
+          </NavLink>
+          <NavLink to="/mind-chips">
+            <Brain />
+            Mind Chips
           </NavLink>
           <a href="/setup.html" target="_blank">
             <BookOpen />

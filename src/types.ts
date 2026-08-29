@@ -52,6 +52,26 @@ export interface UsageSummary {
   remaining: number;
 }
 
+export interface MindChipsBalance {
+  balance: number;
+}
+
+export interface CreditTransaction {
+  id: string;
+  user_id: string;
+  amount: number;
+  description: string;
+  type: "bonus" | "generation" | "refund";
+  generation_type: string | null;
+  created_at: string;
+}
+
+export const GENERATION_COSTS: Record<GenerationType, number> = {
+  text: 1,
+  image: 10,
+  video: 50,
+};
+
 export interface GenerateRequest {
   type: GenerationType;
   prompt: string;

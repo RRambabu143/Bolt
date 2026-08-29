@@ -16,6 +16,7 @@ import type {
   GenerationType,
   PromptTemplate,
 } from "../types";
+import { GENERATION_COSTS } from "../types";
 import PromptTemplates from "../components/PromptTemplates";
 import SettingsPanel, {
   type SettingsValue,
@@ -95,13 +96,19 @@ export default function Studio() {
     setBusy(true);
     setResult(null);
     try {
-      const row = await generate({
+      const result = await generate({
         type,
         prompt: prompt.trim(),
         settings: settings as unknown as Record<string, unknown>,
       });
-      setResult(row);
-      toast.success(type === "video" ? "Veo job started" : "Creation complete");
+      setResult(result.row);
+      const cost = GENERATION_COSTS[type];
+      const chipWord = cost === 1 ? "Mind Chip" : "Mind Chips";
+      if (result.balance !== null) {
+        toast.success(`${cost} ${chipWord} used • ${result.balance} Mind Chips remaining`);
+      } else {
+        toast.success(type === "video" ? "Veo job started" : "Creation complete");
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Generation failed";
       console.error("[MindMesh] Generation error:", e);
@@ -219,7 +226,7 @@ export default function Studio() {
           >
             {busy ? <LoaderCircle className="spin" /> : <Sparkles />}
             {busy ? "Creating…" : `Generate ${type}`}
-            <kbd>⌘ ↵</kbd>
+            <kbd>{GENERATION_COSTS[type]} {GENERATION_COSTS[type] === 1 ? "Mind Chip" : "Mind Chips"}</kbd>
           </button>
         </section>
         <section className="outputPanel">

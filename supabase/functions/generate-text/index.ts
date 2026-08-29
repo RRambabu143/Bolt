@@ -62,6 +62,27 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Deduct 1 Mind Chip for text generation
+    const COST = 1;
+    const { data: newBalance, error: deductErr } = await userClient.rpc("deduct_mind_chips", {
+      p_amount: COST,
+      p_description: "Text Generation",
+      p_generation_type: "text",
+    });
+    if (deductErr) {
+      const msg = deductErr.message || "Deduction failed";
+      if (msg.includes("INSUFFICIENT_BALANCE")) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Not enough Mind Chips", details: msg.replace("INSUFFICIENT_BALANCE: ", "") }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to deduct Mind Chips", details: msg }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const tone = settings?.tone || "Professional";
     const format = settings?.format || "Article";
     const creativity = Math.max(0, Math.min(100, settings?.creativity ?? 60));
@@ -105,6 +126,8 @@ Deno.serve(async (req: Request) => {
       } catch { /* use default */ }
 
       console.error(`[generate-text] OpenAI error ${openaiResponse.status}: ${errMessage}`);
+
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Text Generation Refund" });
 
       if (openaiResponse.status === 429) {
         return new Response(
@@ -156,6 +179,7 @@ Deno.serve(async (req: Request) => {
 
     if (dbErr) {
       console.error(`[generate-text] DB error: ${dbErr.message}`);
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Text Generation Refund" });
       return new Response(
         JSON.stringify({ success: false, error: "Database write failed", details: dbErr.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -163,7 +187,7 @@ Deno.serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: row }),
+      JSON.stringify({ success: true, data: row, balance: newBalance }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {

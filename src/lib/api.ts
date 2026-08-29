@@ -1,10 +1,12 @@
 import { supabase } from "./supabase";
 import type {
+  CreditTransaction,
   GenerateRequest,
   Generation,
   HistoryFilter,
   UsageSummary,
 } from "../types";
+import { GENERATION_COSTS } from "../types";
 
 export const demoMode = import.meta.env.VITE_DEMO_MODE === "true";
 
@@ -42,11 +44,37 @@ async function invokeFunction<T>(
   return data.data as T;
 }
 
-export async function generate(req: GenerateRequest): Promise<Generation> {
-  return invokeFunction<Generation>(
-    req.type === "text" ? "generate-text" : req.type === "image" ? "generate-image" : "generate-video",
-    { prompt: req.prompt, settings: req.settings },
-  );
+export interface GenerateResult {
+  row: Generation;
+  balance: number | null;
+}
+
+export async function generate(req: GenerateRequest): Promise<GenerateResult> {
+  const name =
+    req.type === "text"
+      ? "generate-text"
+      : req.type === "image"
+        ? "generate-image"
+        : "generate-video";
+  const { data, error } = await supabase.functions.invoke(name, {
+    body: { prompt: req.prompt, settings: req.settings },
+  });
+
+  if (error) {
+    throw new Error(getFunctionError(error, name));
+  }
+
+  if (data?.success === false) {
+    const msg = data.error || "Generation failed";
+    const details = data.details ? `: ${data.details}` : "";
+    throw new Error(`${msg}${details}`);
+  }
+
+  if (!data) {
+    throw new Error(`${name} returned no data`);
+  }
+
+  return { row: data.data as Generation, balance: data.balance ?? null };
 }
 
 export async function pollVideoStatus(id: string): Promise<Generation> {
@@ -124,6 +152,36 @@ export async function getUsage(): Promise<UsageSummary> {
     daily_limit: dailyLimit,
     remaining: Math.max(0, dailyLimit - rows.length),
   };
+}
+
+export async function getMindChipsBalance(): Promise<number> {
+  if (demoMode) return 500;
+  const { data, error } = await supabase.rpc("get_user_balance");
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
+}
+
+export async function getMindChipsTransactions(): Promise<CreditTransaction[]> {
+  if (demoMode) {
+    return [
+      {
+        id: "demo-1",
+        user_id: "demo-user",
+        amount: 500,
+        description: "Welcome Bonus",
+        type: "bonus",
+        generation_type: null,
+        created_at: new Date().toISOString(),
+      },
+    ];
+  }
+  const { data, error } = await supabase
+    .from("credit_transactions")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+  return (data || []) as CreditTransaction[];
 }
 
 export function exportText(row: Generation) {

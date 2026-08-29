@@ -1,4 +1,4 @@
-import type { GenerateRequest, Generation, UsageSummary } from "../types";
+import type { CreditTransaction, GenerateRequest, Generation, UsageSummary } from "../types";
 
 const KEY = "mindmesh-demo-generations";
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -121,5 +121,23 @@ export const demo = {
       daily_limit: 50,
       remaining: Math.max(0, 50 - rows.length),
     };
+  },
+
+  mindChipsBalance(): number {
+    return 500;
+  },
+
+  mindChipsTransactions(): CreditTransaction[] {
+    return [
+      {
+        id: "demo-bonus",
+        user_id: "demo-user",
+        amount: 500,
+        description: "Welcome Bonus",
+        type: "bonus",
+        generation_type: null,
+        created_at: new Date().toISOString(),
+      },
+    ];
   },
 };

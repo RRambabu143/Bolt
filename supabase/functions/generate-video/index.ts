@@ -59,6 +59,27 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Deduct 50 Mind Chips for video generation
+    const COST = 50;
+    const { data: newBalance, error: deductErr } = await userClient.rpc("deduct_mind_chips", {
+      p_amount: COST,
+      p_description: "Video Generation",
+      p_generation_type: "video",
+    });
+    if (deductErr) {
+      const msg = deductErr.message || "Deduction failed";
+      if (msg.includes("INSUFFICIENT_BALANCE")) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Not enough Mind Chips", details: msg.replace("INSUFFICIENT_BALANCE: ", "") }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ success: false, error: "Failed to deduct Mind Chips", details: msg }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data: row, error: dbErr } = await supabase
       .from("generations")
       .insert({
@@ -75,6 +96,7 @@ Deno.serve(async (req: Request) => {
 
     if (dbErr) {
       console.error(`[generate-video] DB insert error: ${dbErr.message}`);
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
       return new Response(
         JSON.stringify({ success: false, error: "Database write failed", details: dbErr.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -115,6 +137,7 @@ Deno.serve(async (req: Request) => {
           } catch { /* use default */ }
 
           console.error(`[generate-video] Veo submit error ${videoResponse.status}: ${errMessage}`);
+          await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
           await supabase.from("generations").update({
             status: "failed",
             error_message: errMessage,
@@ -154,6 +177,7 @@ Deno.serve(async (req: Request) => {
           if (pollData.done) {
             if (pollData.error) {
               console.error(`[generate-video] Operation failed: ${pollData.error.message}`);
+              await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
               await supabase.from("generations").update({
                 status: "failed",
                 error_message: pollData.error.message || "Video generation failed",
@@ -167,6 +191,7 @@ Deno.serve(async (req: Request) => {
 
             if (!videoUri) {
               console.error("[generate-video] No video URI in response");
+              await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
               await supabase.from("generations").update({
                 status: "failed",
                 error_message: "No video URL returned from provider",
@@ -179,6 +204,7 @@ Deno.serve(async (req: Request) => {
             const videoFetch = await fetch(`${videoUri}&key=${googleKey}`);
             if (!videoFetch.ok) {
               console.error(`[generate-video] Video download failed: ${videoFetch.status}`);
+              await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
               await supabase.from("generations").update({
                 status: "failed",
                 error_message: "Failed to download video from provider",
@@ -194,6 +220,7 @@ Deno.serve(async (req: Request) => {
 
             if (uploadErr) {
               console.error(`[generate-video] Storage upload failed: ${uploadErr.message}`);
+              await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
               await supabase.from("generations").update({
                 status: "failed",
                 error_message: "Storage upload failed: " + uploadErr.message,
@@ -219,12 +246,14 @@ Deno.serve(async (req: Request) => {
         }
 
         console.error("[generate-video] Timed out after " + maxAttempts + " attempts");
+        await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
         await supabase.from("generations").update({
           status: "failed",
           error_message: "Video generation timed out",
         }).eq("id", row.id);
       } catch (err) {
         console.error(`[generate-video] Background task error: ${err.message}`);
+        await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Video Generation Refund" });
         await supabase.from("generations").update({
           status: "failed",
           error_message: err.message,
@@ -233,7 +262,7 @@ Deno.serve(async (req: Request) => {
     })());
 
     return new Response(
-      JSON.stringify({ success: true, data: row }),
+      JSON.stringify({ success: true, data: row, balance: newBalance }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
