@@ -244,6 +244,41 @@ main > header b {
   letter-spacing: 1px;
   padding: 4px 7px;
 }
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.headerStatus {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.headerBalance {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #445335;
+  background: #1a1f15;
+  border-radius: 20px;
+  padding: 5px 12px;
+  color: #a7f36b;
+  font-size: 11px;
+}
+.headerBalance svg {
+  width: 14px;
+}
+.headerBalance b {
+  border: 0;
+  font-size: 13px;
+  letter-spacing: 0;
+  padding: 0;
+  color: #d4fb88;
+}
+.headerBalance span {
+  color: #8b9a72;
+  font-size: 10px;
+}
 .page {
   padding: 45px clamp(20px, 5vw, 72px) 70px;
   max-width: 1500px;

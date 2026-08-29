@@ -17,6 +17,7 @@ import type {
   PromptTemplate,
 } from "../types";
 import { GENERATION_COSTS } from "../types";
+import { useBalance } from "../components/UsageMeter";
 import PromptTemplates from "../components/PromptTemplates";
 import SettingsPanel, {
   type SettingsValue,
@@ -71,6 +72,7 @@ export default function Studio() {
   const [busy, setBusy] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [templates, setTemplates] = useState(false);
+  const { refresh: refreshBalance } = useBalance();
 
   useEffect(() => {
     setSettings(defaultSettings[type]);
@@ -109,6 +111,7 @@ export default function Studio() {
       } else {
         toast.success(type === "video" ? "Veo job started" : "Creation complete");
       }
+      refreshBalance();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Generation failed";
       console.error("[MindMesh] Generation error:", e);

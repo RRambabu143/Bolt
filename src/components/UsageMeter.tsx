@@ -1,13 +1,26 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { Brain } from "lucide-react";
-import { getMindChipsBalance } from "../lib/api";
-import { demoMode } from "../lib/api";
+import { getMindChipsBalance, demoMode } from "../lib/api";
 import { demo } from "../lib/demo";
 
-export default function UsageMeter() {
+interface BalanceContextValue {
+  balance: number | null;
+  refresh: () => void;
+}
+
+const BalanceContext = createContext<BalanceContextValue>({
+  balance: null,
+  refresh: () => {},
+});
+
+export function useBalance() {
+  return useContext(BalanceContext);
+}
+
+export function BalanceProvider({ children }: { children: React.ReactNode }) {
   const [balance, setBalance] = useState<number | null>(null);
 
-  useEffect(() => {
+  const load = () => {
     if (demoMode) {
       setBalance(demo.mindChipsBalance());
       return;
@@ -15,7 +28,21 @@ export default function UsageMeter() {
     getMindChipsBalance()
       .then(setBalance)
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    load();
   }, []);
+
+  return (
+    <BalanceContext.Provider value={{ balance, refresh: load }}>
+      {children}
+    </BalanceContext.Provider>
+  );
+}
+
+export default function UsageMeter() {
+  const { balance } = useBalance();
 
   if (balance === null) return null;
 
@@ -38,10 +65,14 @@ export default function UsageMeter() {
   );
 }
 
-export function useBalanceRefresher() {
-  const [refreshKey, setRefreshKey] = useState(0);
-  return {
-    refreshKey,
-    refresh: () => setRefreshKey((k) => k + 1),
-  };
+export function HeaderBalance() {
+  const { balance } = useBalance();
+  if (balance === null) return null;
+  return (
+    <div className="headerBalance">
+      <Brain />
+      <b>{balance}</b>
+      <span>Mind Chips</span>
+    </div>
+  );
 }
