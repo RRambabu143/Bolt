@@ -49,7 +49,7 @@ export const TONES = [
 ];
 
 export const VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"] as const;
-export const VIDEO_DURATIONS = [4, 6, 8] as const;
+export const VIDEO_DURATIONS = [4, 6, 8, 10] as const;
 
 export const IMAGE_PROVIDERS = [
   { value: "openai" as const, label: "OpenAI GPT-Image-2", model: "gpt-image-2" },

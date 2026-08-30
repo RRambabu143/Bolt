@@ -25,7 +25,7 @@ export interface ImageSettingsValue {
 export interface VideoSettingsValue {
   model: string;
   aspect_ratio: "16:9" | "9:16";
-  duration_seconds: 4 | 6 | 8;
+  duration_seconds: 4 | 6 | 8 | 10;
   resolution: "720p" | "1080p" | "4k";
   include_audio: boolean;
 }
