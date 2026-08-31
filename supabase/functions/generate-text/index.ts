@@ -12,13 +12,13 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const claudeKey = Deno.env.get("claude_api_key");
+    const claudeKey = Deno.env.get("cluad_api_key");
 
     if (!claudeKey) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "claude_api_key is missing",
+          error: "cluad_api_key is missing",
           details: "The Claude API key secret has not been configured for this Edge Function.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
