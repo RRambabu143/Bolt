@@ -28,7 +28,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["portrait", "cinematic"],
     prompt:
       "A cinematic editorial portrait of [SUBJECT], confident expression, dramatic rim lighting, soft atmospheric haze, premium color grading, realistic skin texture, shallow depth of field, photographed on an 85mm lens.",
-    settings: { aspect_ratio: "3:4", provider: "openai", model: "gpt-image-2", n: 1, quality: "standard" },
+    settings: { aspect_ratio: "3:4", provider: "google", model: "gemini-3.1-flash-image", n: 1, quality: "standard" },
   },
   {
     id: "product-hero",
@@ -38,7 +38,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["product", "advertising"],
     prompt:
       "Premium advertising hero shot of [PRODUCT] on a sculptural pedestal, sophisticated studio lighting, subtle reflections, luxury commercial art direction, clean negative space for headline, photorealistic.",
-    settings: { aspect_ratio: "4:3", provider: "openai", model: "gpt-image-2", n: 1, quality: "hd" },
+    settings: { aspect_ratio: "4:3", provider: "google", model: "gemini-3.1-flash-image", n: 1, quality: "hd" },
   },
   {
     id: "miniature-world",

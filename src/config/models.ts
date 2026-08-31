@@ -10,8 +10,8 @@ export const MODEL_DISPLAY: Record<
     detail: "Advanced writing and reasoning",
   },
   image: {
-    name: "GPT-Image-2",
-    provider: "OpenAI / Google",
+    name: "Gemini Flash Image",
+    provider: "Google",
     detail: "High-quality image generation",
   },
   video: {
@@ -52,7 +52,6 @@ export const VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"] as const;
 export const VIDEO_DURATIONS = [4, 6, 8, 10] as const;
 
 export const IMAGE_PROVIDERS = [
-  { value: "openai" as const, label: "OpenAI GPT-Image-2", model: "gpt-image-2" },
   { value: "google" as const, label: "Google Gemini Flash", model: "gemini-3.1-flash-image" },
 ];
 

@@ -7,7 +7,7 @@
   - `user_id` (uuid, not null, defaults to authenticated user, references auth.users with cascade delete)
   - `type` (text, not null — 'text', 'image', or 'video')
   - `prompt` (text, not null)
-  - `provider` (text — 'openai', 'google', 'demo')
+  - `provider` (text — 'google', 'anthropic', 'demo')
   - `model` (text — model name used)
   - `status` (text, not null, default 'queued' — 'queued', 'processing', 'completed', 'failed')
   - `result_url` (text — URL to generated asset or text content)

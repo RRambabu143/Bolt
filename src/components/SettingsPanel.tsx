@@ -16,7 +16,7 @@ export interface TextSettingsValue {
   creativity: number;
 }
 export interface ImageSettingsValue {
-  provider: "openai" | "google";
+  provider: "google";
   model: string;
   aspect_ratio: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
   n: number;
@@ -94,9 +94,9 @@ export default function SettingsPanel({
             <select
               value={(value as ImageSettingsValue).provider}
               onChange={(e) => {
-                const provider = e.target.value as "openai" | "google";
+                const provider = e.target.value as "google";
                 const found = IMAGE_PROVIDERS.find((p) => p.value === provider);
-                patch({ provider, model: found?.model || "dall-e-3" });
+                patch({ provider, model: found?.model || "gemini-3.1-flash-image" });
               }}
             >
               {IMAGE_PROVIDERS.map((p) => (

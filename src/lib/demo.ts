@@ -44,16 +44,16 @@ export const demo = {
       provider: "demo",
       model:
         x.type === "text"
-          ? "gpt-4o-demo"
+          ? "claude-sonnet-5-demo"
           : x.type === "image"
-            ? "dall-e-3-demo"
+            ? "gemini-flash-demo"
             : "veo-demo",
       status: x.type === "video" ? "processing" : "completed",
       result_text:
         x.type === "text"
           ? "# MindMesh Demo Output\n\n" +
             x.prompt +
-            "\n\nConnect your OpenAI key to replace this preview with live GPT output."
+            "\n\nConnect your Claude key to replace this preview with live output."
           : null,
       result_url:
         x.type === "image"

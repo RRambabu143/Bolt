@@ -1,6 +1,6 @@
 export type GenerationType = "text" | "image" | "video";
 export type GenerationStatus = "queued" | "processing" | "completed" | "failed";
-export type Provider = "openai" | "google" | "demo";
+export type Provider = "google" | "anthropic" | "demo";
 
 export interface TextSettings {
   tone: string;
@@ -9,7 +9,7 @@ export interface TextSettings {
 }
 
 export interface ImageSettings {
-  provider: "openai" | "google";
+  provider: "google";
   model: string;
   aspect_ratio: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
   n: number;

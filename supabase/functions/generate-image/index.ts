@@ -38,9 +38,7 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const { prompt, settings } = body;
-    const provider = settings?.provider || "openai";
     const aspectRatio = settings?.aspect_ratio || "1:1";
-    const quality = settings?.quality || "standard";
     const n = Math.min(4, Math.max(1, settings?.n || 1));
 
     if (!prompt || prompt.trim().length < 3) {
@@ -71,175 +69,89 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    let imageUrls: string[] = [];
-    let model = "";
-
-    if (provider === "google") {
-      const googleKey = Deno.env.get("GOOGLE_API_KEY");
-      if (!googleKey) {
-        return new Response(
-          JSON.stringify({ success: false, error: "GOOGLE_API_KEY is missing", details: "The GOOGLE_API_KEY secret has not been configured." }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      model = Deno.env.get("GOOGLE_IMAGE_MODEL") || "gemini-3.1-flash-image";
-
-      console.log(`[generate-image] Google model=${model} aspect=${aspectRatio} n=${n}`);
-
-      // Use Gemini generateContent API with responseModalities for native image generation models
-      const googleResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": googleKey,
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: prompt }],
-              },
-            ],
-            generationConfig: {
-              responseModalities: ["TEXT", "IMAGE"],
-              imageConfig: {
-                aspectRatio: aspectRatio,
-              },
-            },
-          }),
-        },
+    const googleKey = Deno.env.get("GOOGLE_API_KEY");
+    if (!googleKey) {
+      return new Response(
+        JSON.stringify({ success: false, error: "GOOGLE_API_KEY is missing", details: "The GOOGLE_API_KEY secret has not been configured." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
+    }
+    const model = Deno.env.get("GOOGLE_IMAGE_MODEL") || "gemini-3.1-flash-image";
 
-      if (!googleResponse.ok) {
-        const errText = await googleResponse.text();
-        let errMessage = `Google API returned HTTP ${googleResponse.status}`;
-        try {
-          const errJson = JSON.parse(errText);
-          errMessage = errJson.error?.message || errMessage;
-        } catch { /* use default */ }
+    console.log(`[generate-image] Google model=${model} aspect=${aspectRatio} n=${n}`);
 
-        console.error(`[generate-image] Google error ${googleResponse.status}: ${errMessage}`);
+    const imageUrls: string[] = [];
 
-        await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
-
-        if (googleResponse.status === 429) {
-          return new Response(
-            JSON.stringify({ success: false, error: "Provider returned HTTP 429", details: errMessage }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-
-        return new Response(
-          JSON.stringify({ success: false, error: "Google API request failed", details: errMessage }),
-          { status: googleResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-
-      const googleData = await googleResponse.json();
-
-      // Extract images from candidates[].content.parts[]
-      const candidates = googleData.candidates || [];
-      for (const candidate of candidates) {
-        const parts = candidate?.content?.parts || [];
-        for (const part of parts) {
-          if (part.inlineData?.data) {
-            const mimeType = part.inlineData.mimeType || "image/png";
-            const ext = mimeType.includes("jpeg") ? "jpg" : "png";
-            imageUrls.push(`data:${mimeType};base64,${part.inlineData.data}`);
-          } else if (part.inlineData?.inlineData) {
-            // Some responses nest differently
-            const data = part.inlineData.inlineData;
-            if (data?.data) {
-              const mimeType = data.mimeType || "image/png";
-              imageUrls.push(`data:${mimeType};base64,${data.data}`);
-            }
-          }
-        }
-      }
-
-      console.log(`[generate-image] Google returned ${imageUrls.length} images`);
-    } else {
-      const openaiKey = Deno.env.get("OPENAI_API_KEY");
-      if (!openaiKey) {
-        return new Response(
-          JSON.stringify({ success: false, error: "OPENAI_API_KEY is missing", details: "The OPENAI_API_KEY secret has not been configured." }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
-      model = Deno.env.get("OPENAI_IMAGE_MODEL") || "gpt-image-1";
-
-      const sizeMap: Record<string, string> = {
-        "1:1": "1024x1024",
-        "16:9": "1536x1024",
-        "9:16": "1024x1536",
-        "4:3": "1024x1024",
-        "3:4": "1024x1024",
-      };
-      const size = sizeMap[aspectRatio] || "1024x1024";
-
-      // gpt-image-2 uses low/medium/high/auto instead of standard/hd
-      const qualityMap: Record<string, string> = {
-        "standard": "medium",
-        "hd": "high",
-      };
-      const openaiQuality = qualityMap[quality] || "auto";
-
-      console.log(`[generate-image] OpenAI model=${model} size=${size} quality=${openaiQuality} n=${n}`);
-
-      const openaiResponse = await fetch("https://api.openai.com/v1/images/generations", {
+    const googleResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${openaiKey}`,
+          "x-goog-api-key": googleKey,
         },
         body: JSON.stringify({
-          model,
-          prompt,
-          n: Math.min(1, n),
-          size,
-          quality: openaiQuality,
-          output_format: "png",
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: prompt }],
+            },
+          ],
+          generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"],
+            imageConfig: {
+              aspectRatio: aspectRatio,
+            },
+          },
         }),
-      });
+      },
+    );
 
-      if (!openaiResponse.ok) {
-        const errText = await openaiResponse.text();
-        let errMessage = `OpenAI returned HTTP ${openaiResponse.status}`;
-        try {
-          const errJson = JSON.parse(errText);
-          errMessage = errJson.error?.message || errMessage;
-        } catch { /* use default */ }
+    if (!googleResponse.ok) {
+      const errText = await googleResponse.text();
+      let errMessage = `Google API returned HTTP ${googleResponse.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        errMessage = errJson.error?.message || errMessage;
+      } catch { /* use default */ }
 
-        console.error(`[generate-image] OpenAI error ${openaiResponse.status}: ${errMessage}`);
+      console.error(`[generate-image] Google error ${googleResponse.status}: ${errMessage}`);
 
-        await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
 
-        if (openaiResponse.status === 429) {
-          return new Response(
-            JSON.stringify({ success: false, error: "Provider returned HTTP 429", details: errMessage }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-
+      if (googleResponse.status === 429) {
         return new Response(
-          JSON.stringify({ success: false, error: "OpenAI request failed", details: errMessage }),
-          { status: openaiResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({ success: false, error: "Provider returned HTTP 429", details: errMessage }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      const openaiData = await openaiResponse.json();
-      for (const img of openaiData.data || []) {
-        if (img.b64_json) {
-          imageUrls.push(`data:image/png;base64,${img.b64_json}`);
-        } else if (img.url) {
-          imageUrls.push(img.url);
+      return new Response(
+        JSON.stringify({ success: false, error: "Google API request failed", details: errMessage }),
+        { status: googleResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const googleData = await googleResponse.json();
+
+    const candidates = googleData.candidates || [];
+    for (const candidate of candidates) {
+      const parts = candidate?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          const mimeType = part.inlineData.mimeType || "image/png";
+          imageUrls.push(`data:${mimeType};base64,${part.inlineData.data}`);
+        } else if (part.inlineData?.inlineData) {
+          const data = part.inlineData.inlineData;
+          if (data?.data) {
+            const mimeType = data.mimeType || "image/png";
+            imageUrls.push(`data:${mimeType};base64,${data.data}`);
+          }
         }
       }
-
-      console.log(`[generate-image] OpenAI returned ${imageUrls.length} images`);
     }
+
+    console.log(`[generate-image] Google returned ${imageUrls.length} images`);
 
     if (imageUrls.length === 0) {
       await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
@@ -280,11 +192,11 @@ Deno.serve(async (req: Request) => {
         user_id: user.id,
         type: "image",
         prompt,
-        provider,
+        provider: "google",
         model,
         status: "completed",
         result_url: primaryUrl,
-        metadata: { aspect_ratio: aspectRatio, quality, n, all_urls: storedUrls, settings: settings || {} },
+        metadata: { aspect_ratio: aspectRatio, n, all_urls: storedUrls, settings: settings || {} },
       })
       .select()
       .single();
@@ -303,9 +215,9 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error(`[generate-image] Unhandled error: ${err.message}`);
+    console.error(`[generate-image] Unhandled error: ${(err as Error).message}`);
     return new Response(
-      JSON.stringify({ success: false, error: "Generation failed", details: err.message }),
+      JSON.stringify({ success: false, error: "Generation failed", details: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

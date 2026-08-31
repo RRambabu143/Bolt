@@ -49,8 +49,8 @@ const MODES = [
 const defaultSettings: Record<GenerationType, SettingsValue> = {
   text: { tone: "Professional", format: "Article", creativity: 60 },
   image: {
-    provider: "openai",
-    model: "dall-e-3",
+    provider: "google",
+    model: "gemini-3.1-flash-image",
     aspect_ratio: "1:1",
     n: 1,
     quality: "standard",
