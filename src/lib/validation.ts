@@ -19,8 +19,8 @@ export function normalizeSettings(
     };
   if (type === "image")
     return {
-      provider: (input.provider as string) || "cloudflare",
-      model: (input.model as string) || "@cf/black-forest-labs/flux-1-schnell",
+      provider: (input.provider as string) || "google",
+      model: (input.model as string) || "gemini-3.1-flash-image",
       aspect_ratio: (input.aspect_ratio as string) || "1:1",
       n: Math.min(4, Math.max(1, (input.n as number) ?? 1)),
       quality: (input.quality as string) || "standard",

@@ -52,7 +52,7 @@ export const VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"] as const;
 export const VIDEO_DURATIONS = [4, 6, 8, 10] as const;
 
 export const IMAGE_PROVIDERS = [
-  { value: "cloudflare" as const, label: "Cloudflare FLUX (Free Limited)", model: "@cf/black-forest-labs/flux-1-schnell" },
+  { value: "google" as const, label: "Google Gemini Flash", model: "gemini-3.1-flash-image" },
 ];
 
 export const IMAGE_QUALITIES = ["standard", "hd"] as const;

@@ -9,7 +9,7 @@ export interface TextSettings {
 }
 
 export interface ImageSettings {
-  provider: "cloudflare";
+  provider: "google";
   model: string;
   aspect_ratio: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
   n: number;

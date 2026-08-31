@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
     const tone = settings?.tone || "Professional";
     const format = settings?.format || "Article";
     const creativity = Math.max(0, Math.min(100, settings?.creativity ?? 60));
-    const model = Deno.env.get("CLAUDE_TEXT_MODEL") || "claude-sonnet-5";
+    const model = Deno.env.get("CLUADE_TEXT_MODLE") || "claude-sonnet-5-20250514";
 
     const systemPrompt = `You are a professional creative writing assistant. Generate ${format.toLowerCase()} content with a ${tone.toLowerCase()} tone. Format the output in clean markdown.`;
 
@@ -103,6 +103,7 @@ Deno.serve(async (req: Request) => {
         max_tokens: 4096,
         system: systemPrompt,
         messages: [{ role: "user", content: prompt }],
+        temperature: creativity / 100,
       }),
     });
 
@@ -183,7 +184,7 @@ Deno.serve(async (req: Request) => {
 
 async function handleEnhance(prompt: string, claudeKey: string): Promise<Response> {
   try {
-    const model = Deno.env.get("CLAUDE_TEXT_MODEL") || "claude-sonnet-5";
+    const model = Deno.env.get("CLUADE_TEXT_MODLE") || "claude-sonnet-5-20250514";
     const enhancePrompt = `Enhance this creative prompt by adding specific details about composition, style, lighting, mood, and technical qualities. Keep it concise but vivid. Original prompt: "${prompt}". Return only the enhanced prompt, no explanation.`;
 
     const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {

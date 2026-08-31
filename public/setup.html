@@ -1,6 +1,6 @@
 <!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MindMesh Setup</title><style>body{font:16px system-ui;background:#0b0c10;color:#eee;max-width:800px;margin:auto;padding:50px 22px;line-height:1.7}h1,h2{color:#c8ff7a}code,pre{background:#191a21;border:1px solid #30323c;border-radius:8px}code{padding:2px 5px}pre{padding:16px;overflow:auto}a{color:#7ee5bd}.card{padding:20px;border:1px solid #292b34;border-radius:12px;background:#121319;margin:18px 0}</style></head><body><h1>MindMesh AI Studio Pro Setup</h1><p>This in-app checklist covers the production connection. The repository README contains the complete guide.</p><div class="card"><h2>1. Public browser variables</h2><pre>VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
-VITE_DEMO_MODE=false</pre></div><div class="card"><h2>2. Protected server secrets</h2><pre>npx supabase secrets set claude_api_key=...
+VITE_DEMO_MODE=false</pre></div><div class="card"><h2>2. Protected server secrets</h2><pre>npx supabase secrets set cluad_api_key=...
 npx supabase secrets set GOOGLE_API_KEY=...</pre><p>Never prefix provider keys with <code>VITE_</code>.</p></div><div class="card"><h2>3. Deploy</h2><pre>npx supabase db push
 npx supabase functions deploy generate-text
 npx supabase functions deploy generate-image

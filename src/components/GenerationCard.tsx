@@ -15,21 +15,19 @@ export default function GenerationCard({
   onFavorite,
   onDelete,
   onRefresh,
-  onOpen,
 }: {
   row: Generation;
   onFavorite: () => void;
   onDelete: () => void;
   onRefresh: () => void;
-  onOpen: () => void;
 }) {
   return (
-    <article className="generationCard" onClick={onOpen} style={{ cursor: "pointer" }}>
+    <article className="generationCard">
       <div className="cardVisual">
         {row.type === "image" && row.result_url ? (
           <img src={row.result_url} alt={row.prompt} />
         ) : row.type === "video" && row.result_url ? (
-          <video src={row.result_url} muted />
+          <video src={row.result_url} />
         ) : row.type === "text" ? (
           <FileText />
         ) : row.type === "image" ? (
@@ -42,10 +40,7 @@ export default function GenerationCard({
         <span className={"status " + row.status}>{row.status}</span>
         <button
           className={"favorite " + (row.favorite ? "active" : "")}
-          onClick={(e) => {
-            e.stopPropagation();
-            onFavorite();
-          }}
+          onClick={onFavorite}
         >
           <Heart />
         </button>
@@ -59,7 +54,7 @@ export default function GenerationCard({
           <span>{row.model}</span>
           <div>
             {row.type === "video" && row.status === "processing" && (
-              <button title="Refresh" onClick={(e) => { e.stopPropagation(); onRefresh(); }}>
+              <button title="Refresh" onClick={onRefresh}>
                 <RefreshCw />
               </button>
             )}
@@ -69,12 +64,11 @@ export default function GenerationCard({
                 href={row.result_url}
                 target="_blank"
                 rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
               >
                 <Download />
               </a>
             )}
-            <button title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+            <button title="Delete" onClick={onDelete}>
               <Trash2 />
             </button>
           </div>

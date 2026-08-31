@@ -16,7 +16,7 @@ export interface TextSettingsValue {
   creativity: number;
 }
 export interface ImageSettingsValue {
-  provider: "cloudflare";
+  provider: "google";
   model: string;
   aspect_ratio: "1:1" | "16:9" | "9:16" | "4:3" | "3:4";
   n: number;
@@ -94,9 +94,9 @@ export default function SettingsPanel({
             <select
               value={(value as ImageSettingsValue).provider}
               onChange={(e) => {
-                const provider = e.target.value as "cloudflare";
+                const provider = e.target.value as "google";
                 const found = IMAGE_PROVIDERS.find((p) => p.value === provider);
-                patch({ provider, model: found?.model || "@cf/black-forest-labs/flux-1-schnell" });
+                patch({ provider, model: found?.model || "gemini-3.1-flash-image" });
               }}
             >
               {IMAGE_PROVIDERS.map((p) => (
@@ -117,65 +117,58 @@ export default function SettingsPanel({
               </option>
             </select>
           </label>
-          {(value as ImageSettingsValue).provider !== "cloudflare" && (
-            <>
-              <label>
-                Aspect ratio
-                <div className="segmented">
-                  {ASPECT_RATIOS.map((x) => (
-                    <button
-                      className={
-                        (value as ImageSettingsValue).aspect_ratio === x.value
-                          ? "active"
-                          : ""
-                      }
-                      onClick={() =>
-                        patch({ aspect_ratio: x.value })
-                      }
-                      key={x.value}
-                    >
-                      {x.detail}
-                    </button>
-                  ))}
-                </div>
-              </label>
-              <label>
-                Number of images
-                <div className="segmented">
-                  {[1, 2, 3, 4].map((n) => (
-                    <button
-                      className={
-                        (value as ImageSettingsValue).n === n ? "active" : ""
-                      }
-                      onClick={() => patch({ n })}
-                      key={n}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </label>
-              <label>
-                Quality
-                <div className="segmented">
-                  {IMAGE_QUALITIES.map((q) => (
-                    <button
-                      className={
-                        (value as ImageSettingsValue).quality === q ? "active" : ""
-                      }
-                      onClick={() => patch({ quality: q })}
-                      key={q}
-                    >
-                      {q === "hd" ? "HD" : "Standard"}
-                    </button>
-                  ))}
-                </div>
-              </label>
-            </>
-          )}
-          {(value as ImageSettingsValue).provider === "cloudflare" && (
-            <p className="cloudflareNote">FLUX 1 Schnell generates one 1024×1024 image per request. Aspect ratio, count, and quality settings do not apply.</p>
-          )}
+          <label>
+            Aspect ratio
+            <div className="segmented">
+              {ASPECT_RATIOS.map((x) => (
+                <button
+                  className={
+                    (value as ImageSettingsValue).aspect_ratio === x.value
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    patch({ aspect_ratio: x.value })
+                  }
+                  key={x.value}
+                >
+                  {x.detail}
+                </button>
+              ))}
+            </div>
+          </label>
+          <label>
+            Number of images
+            <div className="segmented">
+              {[1, 2, 3, 4].map((n) => (
+                <button
+                  className={
+                    (value as ImageSettingsValue).n === n ? "active" : ""
+                  }
+                  onClick={() => patch({ n })}
+                  key={n}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </label>
+          <label>
+            Quality
+            <div className="segmented">
+              {IMAGE_QUALITIES.map((q) => (
+                <button
+                  className={
+                    (value as ImageSettingsValue).quality === q ? "active" : ""
+                  }
+                  onClick={() => patch({ quality: q })}
+                  key={q}
+                >
+                  {q === "hd" ? "HD" : "Standard"}
+                </button>
+              ))}
+            </div>
+          </label>
         </>
       )}
 

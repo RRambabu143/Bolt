@@ -17,8 +17,8 @@ describe("normalizeSettings", () => {
   it("normalizes image settings", () => {
     const result = normalizeSettings("image", { aspect_ratio: "1:1" });
     expect(result).toEqual({
-      provider: "cloudflare",
-      model: "@cf/black-forest-labs/flux-1-schnell",
+      provider: "google",
+      model: "gemini-3.1-flash-image",
       aspect_ratio: "1:1",
       n: 1,
       quality: "standard",
