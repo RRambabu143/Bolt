@@ -12,13 +12,13 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const claudeKey = Deno.env.get("cluad_api_key");
+    const claudeKey = Deno.env.get("claude_api_key");
 
     if (!claudeKey) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "cluad_api_key is missing",
+          error: "claude_api_key is missing",
           details: "The Claude API key secret has not been configured for this Edge Function.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -85,7 +85,7 @@ Deno.serve(async (req: Request) => {
     const tone = settings?.tone || "Professional";
     const format = settings?.format || "Article";
     const creativity = Math.max(0, Math.min(100, settings?.creativity ?? 60));
-    const model = Deno.env.get("CLUADE_TEXT_MODLE") || "claude-sonnet-5-20250514";
+    const model = Deno.env.get("CLAUDE_TEXT_MODEL") || "claude-sonnet-5";
 
     const systemPrompt = `You are a professional creative writing assistant. Generate ${format.toLowerCase()} content with a ${tone.toLowerCase()} tone. Format the output in clean markdown.`;
 
@@ -184,7 +184,7 @@ Deno.serve(async (req: Request) => {
 
 async function handleEnhance(prompt: string, claudeKey: string): Promise<Response> {
   try {
-    const model = Deno.env.get("CLUADE_TEXT_MODLE") || "claude-sonnet-5-20250514";
+    const model = Deno.env.get("CLAUDE_TEXT_MODEL") || "claude-sonnet-5";
     const enhancePrompt = `Enhance this creative prompt by adding specific details about composition, style, lighting, mood, and technical qualities. Keep it concise but vivid. Original prompt: "${prompt}". Return only the enhanced prompt, no explanation.`;
 
     const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
