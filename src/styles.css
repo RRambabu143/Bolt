@@ -1304,6 +1304,16 @@ main > header b {
 .detailActions .secondary {
   font-size: 10px;
 }
+.cloudflareNote {
+  font-size: 11px;
+  color: #8b9a72;
+  line-height: 1.55;
+  background: #1a1f15;
+  border: 1px solid #3a4030;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0;
+}
 @media (max-width: 1050px) {
   .studioGrid {
     grid-template-columns: 1fr;
