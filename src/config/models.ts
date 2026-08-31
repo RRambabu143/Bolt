@@ -10,9 +10,9 @@ export const MODEL_DISPLAY: Record<
     detail: "Advanced writing and reasoning",
   },
   image: {
-    name: "Gemini Flash Image",
-    provider: "Google",
-    detail: "High-quality image generation",
+    name: "FLUX 1 Schnell",
+    provider: "Cloudflare",
+    detail: "Fast free image generation",
   },
   video: {
     name: "Veo 3.1 Lite",
@@ -52,7 +52,7 @@ export const VIDEO_RESOLUTIONS = ["720p", "1080p", "4k"] as const;
 export const VIDEO_DURATIONS = [4, 6, 8, 10] as const;
 
 export const IMAGE_PROVIDERS = [
-  { value: "google" as const, label: "Google Gemini Flash", model: "gemini-3.1-flash-image" },
+  { value: "cloudflare" as const, label: "Cloudflare FLUX (Free Limited)", model: "@cf/black-forest-labs/flux-1-schnell" },
 ];
 
 export const IMAGE_QUALITIES = ["standard", "hd"] as const;

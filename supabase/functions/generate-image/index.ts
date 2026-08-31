@@ -38,8 +38,6 @@ Deno.serve(async (req: Request) => {
 
     const body = await req.json();
     const { prompt, settings } = body;
-    const aspectRatio = settings?.aspect_ratio || "1:1";
-    const n = Math.min(4, Math.max(1, settings?.n || 1));
 
     if (!prompt || prompt.trim().length < 3) {
       return new Response(
@@ -69,57 +67,48 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const googleKey = Deno.env.get("GOOGLE_API_KEY");
-    if (!googleKey) {
+    const cfToken = Deno.env.get("CLOUDFLARE_API_TOKEN");
+    const cfAccount = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
+
+    if (!cfToken || !cfAccount) {
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
       return new Response(
-        JSON.stringify({ success: false, error: "GOOGLE_API_KEY is missing", details: "The GOOGLE_API_KEY secret has not been configured." }),
+        JSON.stringify({
+          success: false,
+          error: "Cloudflare credentials missing",
+          details: "CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must be configured as server secrets.",
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    const model = Deno.env.get("GOOGLE_IMAGE_MODEL") || "gemini-3.1-flash-image";
 
-    console.log(`[generate-image] Google model=${model} aspect=${aspectRatio} n=${n}`);
+    const model = "@cf/black-forest-labs/flux-1-schnell";
+    const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${cfAccount}/ai/run/${model}`;
 
-    const imageUrls: string[] = [];
+    console.log(`[generate-image] Cloudflare FLUX model=${model}`);
 
-    const googleResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": googleKey,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"],
-            imageConfig: {
-              aspectRatio: aspectRatio,
-            },
-          },
-        }),
+    const cfResponse = await fetch(cfUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${cfToken}`,
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({ prompt, steps: 4 }),
+    });
 
-    if (!googleResponse.ok) {
-      const errText = await googleResponse.text();
-      let errMessage = `Google API returned HTTP ${googleResponse.status}`;
+    if (!cfResponse.ok) {
+      const errText = await cfResponse.text();
+      let errMessage = `Cloudflare returned HTTP ${cfResponse.status}`;
       try {
         const errJson = JSON.parse(errText);
-        errMessage = errJson.error?.message || errMessage;
+        errMessage = errJson.errors?.[0]?.message || errJson.error?.message || errMessage;
       } catch { /* use default */ }
 
-      console.error(`[generate-image] Google error ${googleResponse.status}: ${errMessage}`);
+      console.error(`[generate-image] Cloudflare error ${cfResponse.status}: ${errMessage}`);
 
       await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
 
-      if (googleResponse.status === 429) {
+      if (cfResponse.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: "Provider returned HTTP 429", details: errMessage }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -127,76 +116,57 @@ Deno.serve(async (req: Request) => {
       }
 
       return new Response(
-        JSON.stringify({ success: false, error: "Google API request failed", details: errMessage }),
-        { status: googleResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ success: false, error: "Cloudflare FLUX request failed", details: errMessage }),
+        { status: cfResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const googleData = await googleResponse.json();
+    const cfData = await cfResponse.json();
 
-    const candidates = googleData.candidates || [];
-    for (const candidate of candidates) {
-      const parts = candidate?.content?.parts || [];
-      for (const part of parts) {
-        if (part.inlineData?.data) {
-          const mimeType = part.inlineData.mimeType || "image/png";
-          imageUrls.push(`data:${mimeType};base64,${part.inlineData.data}`);
-        } else if (part.inlineData?.inlineData) {
-          const data = part.inlineData.inlineData;
-          if (data?.data) {
-            const mimeType = data.mimeType || "image/png";
-            imageUrls.push(`data:${mimeType};base64,${data.data}`);
-          }
-        }
-      }
-    }
-
-    console.log(`[generate-image] Google returned ${imageUrls.length} images`);
-
-    if (imageUrls.length === 0) {
+    if (cfData.success === false) {
+      const errMsg = cfData.errors?.[0]?.message || "Cloudflare returned an error";
       await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
       return new Response(
-        JSON.stringify({ success: false, error: "Generation failed", details: "No images returned from provider" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ success: false, error: "Cloudflare FLUX request failed", details: errMsg }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // Upload images to storage and get public URLs
-    const storedUrls: string[] = [];
-    for (let i = 0; i < imageUrls.length; i++) {
-      const dataUrl = imageUrls[i];
-      if (dataUrl.startsWith("data:")) {
-        const base64 = dataUrl.split(",")[1];
-        const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-        const filePath = `${user.id}/${crypto.randomUUID()}.png`;
-        const { error: uploadErr } = await supabase.storage
-          .from("generated-images")
-          .upload(filePath, bytes, { contentType: "image/png" });
-
-        if (uploadErr) {
-          console.error(`[generate-image] Storage upload failed: ${uploadErr.message}`);
-          storedUrls.push(dataUrl);
-        } else {
-          const { data: { publicUrl } } = supabase.storage.from("generated-images").getPublicUrl(filePath);
-          storedUrls.push(publicUrl);
-        }
-      } else {
-        storedUrls.push(dataUrl);
-      }
+    const base64Image = cfData.result?.image;
+    if (!base64Image) {
+      await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Image Generation Refund" });
+      return new Response(
+        JSON.stringify({ success: false, error: "Generation failed", details: "No image returned from Cloudflare" }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
-    const primaryUrl = storedUrls[0];
+    const bytes = Uint8Array.from(atob(base64Image), (c) => c.charCodeAt(0));
+    const filePath = `${user.id}/${crypto.randomUUID()}.jpg`;
+    const { error: uploadErr } = await supabase.storage
+      .from("generated-images")
+      .upload(filePath, bytes, { contentType: "image/jpeg" });
+
+    let storedUrl: string;
+    if (uploadErr) {
+      console.error(`[generate-image] Storage upload failed: ${uploadErr.message}`);
+      storedUrl = `data:image/jpeg;base64,${base64Image}`;
+    } else {
+      const { data: urlData } = supabase.storage.from("generated-images").createSignedUrl(filePath, 60 * 60 * 24 * 7);
+      storedUrl = urlData.signedUrl || `data:image/jpeg;base64,${base64Image}`;
+    }
+
     const { data: row, error: dbErr } = await supabase
       .from("generations")
       .insert({
         user_id: user.id,
         type: "image",
         prompt,
-        provider: "google",
+        provider: "cloudflare",
         model,
         status: "completed",
-        result_url: primaryUrl,
-        metadata: { aspect_ratio: aspectRatio, n, all_urls: storedUrls, settings: settings || {} },
+        result_url: storedUrl,
+        metadata: { all_urls: [storedUrl], settings: settings || {} },
       })
       .select()
       .single();
@@ -209,6 +179,8 @@ Deno.serve(async (req: Request) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
+    console.log(`[generate-image] Cloudflare success, image stored`);
 
     return new Response(
       JSON.stringify({ success: true, data: row, balance: newBalance }),
