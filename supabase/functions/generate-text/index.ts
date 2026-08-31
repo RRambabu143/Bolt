@@ -1,5 +1,3 @@
-import { createClient } from "npm:@supabase/supabase-js@2.112.4";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -14,14 +12,14 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const claudeKey = Deno.env.get("cluad_api_key");
 
-    if (!openaiKey) {
+    if (!claudeKey) {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "OPENAI_API_KEY is missing",
-          details: "The OPENAI_API_KEY secret has not been configured for this Edge Function.",
+          error: "cluad_api_key is missing",
+          details: "The Claude API key secret has not been configured for this Edge Function.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -35,6 +33,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const { createClient } = await import("npm:@supabase/supabase-js@2.112.4");
     const supabase = createClient(supabaseUrl, supabaseKey);
     const userClient = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
@@ -52,7 +51,7 @@ Deno.serve(async (req: Request) => {
     const { prompt, settings, action } = body;
 
     if (action === "enhance") {
-      return await handleEnhance(req, prompt, openaiKey);
+      return await handleEnhance(prompt, claudeKey);
     }
 
     if (!prompt || prompt.trim().length < 3) {
@@ -86,50 +85,41 @@ Deno.serve(async (req: Request) => {
     const tone = settings?.tone || "Professional";
     const format = settings?.format || "Article";
     const creativity = Math.max(0, Math.min(100, settings?.creativity ?? 60));
-    const model = Deno.env.get("OPENAI_TEXT_MODEL") || "gpt-4o";
+    const model = Deno.env.get("CLAUDE_TEXT_MODEL") || "claude-sonnet-5-20250514";
 
-    const effort = creativity > 70 ? "high" : creativity > 40 ? "medium" : "low";
+    const systemPrompt = `You are a professional creative writing assistant. Generate ${format.toLowerCase()} content with a ${tone.toLowerCase()} tone. Format the output in clean markdown.`;
 
-    const instructions = `You are a professional creative writing assistant. Generate ${format.toLowerCase()} content with a ${tone.toLowerCase()} tone. Format the output in clean markdown.`;
+    console.log(`[generate-text] model=${model} tone=${tone} format=${format} creativity=${creativity}`);
 
-    console.log(`[generate-text] model=${model} tone=${tone} format=${format} creativity=${creativity} effort=${effort}`);
-
-    const requestBody: Record<string, unknown> = {
-      model,
-      instructions,
-      input: prompt,
-      max_output_tokens: 4096,
-    };
-
-    // GPT-5+ models use reasoning effort instead of temperature
-    if (model.startsWith("gpt-5") || model.startsWith("o1") || model.startsWith("o3")) {
-      requestBody.reasoning = { effort };
-    } else {
-      requestBody.temperature = creativity / 100;
-    }
-
-    const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
+    const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${openaiKey}`,
+        "x-api-key": claudeKey,
+        "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: [{ role: "user", content: prompt }],
+        temperature: creativity / 100,
+      }),
     });
 
-    if (!openaiResponse.ok) {
-      const errText = await openaiResponse.text();
-      let errMessage = `OpenAI returned HTTP ${openaiResponse.status}`;
+    if (!claudeResponse.ok) {
+      const errText = await claudeResponse.text();
+      let errMessage = `Claude returned HTTP ${claudeResponse.status}`;
       try {
         const errJson = JSON.parse(errText);
         errMessage = errJson.error?.message || errMessage;
       } catch { /* use default */ }
 
-      console.error(`[generate-text] OpenAI error ${openaiResponse.status}: ${errMessage}`);
+      console.error(`[generate-text] Claude error ${claudeResponse.status}: ${errMessage}`);
 
       await userClient.rpc("refund_mind_chips", { p_amount: COST, p_description: "Text Generation Refund" });
 
-      if (openaiResponse.status === 429) {
+      if (claudeResponse.status === 429) {
         return new Response(
           JSON.stringify({ success: false, error: "Provider returned HTTP 429", details: errMessage }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -137,27 +127,20 @@ Deno.serve(async (req: Request) => {
       }
 
       return new Response(
-        JSON.stringify({ success: false, error: "OpenAI request failed", details: errMessage }),
-        { status: openaiResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ success: false, error: "Claude request failed", details: errMessage }),
+        { status: claudeResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const openaiData = await openaiResponse.json();
+    const claudeData = await claudeResponse.json();
 
     let generatedText = "";
-    if (openaiData.output && Array.isArray(openaiData.output)) {
-      for (const item of openaiData.output) {
-        if (item.type === "message" && item.content) {
-          for (const part of item.content) {
-            if (part.type === "output_text" && part.text) {
-              generatedText += part.text;
-            }
-          }
+    if (claudeData.content && Array.isArray(claudeData.content)) {
+      for (const block of claudeData.content) {
+        if (block.type === "text" && block.text) {
+          generatedText += block.text;
         }
       }
-    }
-    if (!generatedText && openaiData.output_text) {
-      generatedText = openaiData.output_text;
     }
 
     console.log(`[generate-text] Success, text length=${generatedText.length}`);
@@ -168,7 +151,7 @@ Deno.serve(async (req: Request) => {
         user_id: user.id,
         type: "text",
         prompt,
-        provider: "openai",
+        provider: "anthropic",
         model,
         status: "completed",
         result_text: generatedText,
@@ -191,63 +174,53 @@ Deno.serve(async (req: Request) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
-    console.error(`[generate-text] Unhandled error: ${err.message}`);
+    console.error(`[generate-text] Unhandled error: ${(err as Error).message}`);
     return new Response(
-      JSON.stringify({ success: false, error: "Generation failed", details: err.message }),
+      JSON.stringify({ success: false, error: "Generation failed", details: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });
 
-async function handleEnhance(req: Request, prompt: string, openaiKey: string): Promise<Response> {
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
-  };
-
+async function handleEnhance(prompt: string, claudeKey: string): Promise<Response> {
   try {
-    const model = Deno.env.get("OPENAI_TEXT_MODEL") || "gpt-4o";
+    const model = Deno.env.get("CLAUDE_TEXT_MODEL") || "claude-sonnet-5-20250514";
     const enhancePrompt = `Enhance this creative prompt by adding specific details about composition, style, lighting, mood, and technical qualities. Keep it concise but vivid. Original prompt: "${prompt}". Return only the enhanced prompt, no explanation.`;
 
-    const openaiResponse = await fetch("https://api.openai.com/v1/responses", {
+    const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${openaiKey}`,
+        "x-api-key": claudeKey,
+        "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model,
-        input: enhancePrompt,
-        max_output_tokens: 500,
+        max_tokens: 500,
+        messages: [{ role: "user", content: enhancePrompt }],
       }),
     });
 
-    if (!openaiResponse.ok) {
-      const errText = await openaiResponse.text();
-      let errMessage = `OpenAI returned HTTP ${openaiResponse.status}`;
+    if (!claudeResponse.ok) {
+      const errText = await claudeResponse.text();
+      let errMessage = `Claude returned HTTP ${claudeResponse.status}`;
       try {
         const errJson = JSON.parse(errText);
         errMessage = errJson.error?.message || errMessage;
       } catch { /* use default */ }
       return new Response(
         JSON.stringify({ success: false, error: "Enhancement failed", details: errMessage }),
-        { status: openaiResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: claudeResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const data = await openaiResponse.json();
+    const data = await claudeResponse.json();
     let enhanced = "";
-    if (data.output && Array.isArray(data.output)) {
-      for (const item of data.output) {
-        if (item.type === "message" && item.content) {
-          for (const part of item.content) {
-            if (part.type === "output_text" && part.text) enhanced += part.text;
-          }
-        }
+    if (data.content && Array.isArray(data.content)) {
+      for (const block of data.content) {
+        if (block.type === "text" && block.text) enhanced += block.text;
       }
     }
-    if (!enhanced && data.output_text) enhanced = data.output_text;
 
     return new Response(
       JSON.stringify({ success: true, data: { enhanced_prompt: enhanced || prompt } }),
@@ -255,7 +228,7 @@ async function handleEnhance(req: Request, prompt: string, openaiKey: string): P
     );
   } catch (err) {
     return new Response(
-      JSON.stringify({ success: false, error: "Enhancement failed", details: err.message }),
+      JSON.stringify({ success: false, error: "Enhancement failed", details: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }

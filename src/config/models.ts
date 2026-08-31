@@ -5,8 +5,8 @@ export const MODEL_DISPLAY: Record<
   { name: string; provider: string; detail: string }
 > = {
   text: {
-    name: "GPT-5.6",
-    provider: "OpenAI",
+    name: "Claude Sonnet 5",
+    provider: "Anthropic",
     detail: "Advanced writing and reasoning",
   },
   image: {
