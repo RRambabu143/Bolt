@@ -28,7 +28,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["portrait", "cinematic"],
     prompt:
       "A cinematic editorial portrait of [SUBJECT], confident expression, dramatic rim lighting, soft atmospheric haze, premium color grading, realistic skin texture, shallow depth of field, photographed on an 85mm lens.",
-    settings: { aspect_ratio: "3:4", provider: "google", model: "gemini-3.1-flash-image", n: 1, quality: "standard" },
+    settings: { aspect_ratio: "3:4", provider: "cloudflare", model: "@cf/black-forest-labs/flux-1-schnell", n: 1, quality: "standard" },
   },
   {
     id: "product-hero",
@@ -38,7 +38,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["product", "advertising"],
     prompt:
       "Premium advertising hero shot of [PRODUCT] on a sculptural pedestal, sophisticated studio lighting, subtle reflections, luxury commercial art direction, clean negative space for headline, photorealistic.",
-    settings: { aspect_ratio: "4:3", provider: "google", model: "gemini-3.1-flash-image", n: 1, quality: "hd" },
+    settings: { aspect_ratio: "4:3", provider: "cloudflare", model: "@cf/black-forest-labs/flux-1-schnell", n: 1, quality: "hd" },
   },
   {
     id: "miniature-world",
@@ -48,7 +48,7 @@ export const PROMPT_TEMPLATES: PromptTemplate[] = [
     tags: ["miniature", "viral"],
     prompt:
       "An intricate miniature world where tiny artisans are creating [SUBJECT], macro photography, tilt-shift depth of field, handcrafted details, cinematic warm lighting, whimsical but photorealistic.",
-    settings: { aspect_ratio: "9:16", provider: "google", model: "gemini-3.1-flash-image", n: 1, quality: "standard" },
+    settings: { aspect_ratio: "9:16", provider: "cloudflare", model: "@cf/black-forest-labs/flux-1-schnell", n: 1, quality: "standard" },
   },
   {
     id: "cinematic-reveal",
